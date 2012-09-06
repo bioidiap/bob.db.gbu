@@ -226,7 +226,7 @@ def create_tables(args):
 def create(args):
   """Creates or re-creates this database"""
 
-  dbfile = utils.connection_string(args.type, args.files[0])
+  dbfile = args.files[0]
 
   if args.recreate:
     if args.verbose and os.path.exists(dbfile):
