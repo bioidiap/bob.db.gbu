@@ -83,3 +83,5 @@ When a single number is required, usually the FRR (or the CAR) at FAR=0.1% are r
 
 from .query import Database
 
+__all__ = ['Database']
+
