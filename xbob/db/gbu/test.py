@@ -128,6 +128,20 @@ class GBUDatabaseTest(unittest.TestCase):
         self.assertEqual(db.get_client_id_from_file_id(file.id), model_id)
 
 
+  def test_annotations(self):
+    # Tests that the annotations are available for all files
+    db = xbob.db.gbu.Database()
+
+    # we test only one of the protocols
+    for protocol in db.m_protocols:
+      files = db.objects(protocol=protocol)
+      for file in files:
+        annotations = db.annotations(file.id)
+        self.assertTrue('leye' in annotations and 'reye' in annotations)
+        self.assertEqual(len(annotations['leye']), 2)
+        self.assertEqual(len(annotations['reye']), 2)
+
+
   def test_driver_api(self):
     # Tests the functions of the driver API
     from bob.db.script.dbmanage import main

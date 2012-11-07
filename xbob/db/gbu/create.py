@@ -252,9 +252,9 @@ def add_command(subparsers):
 
   parser = subparsers.add_parser('create', help=create.__doc__)
 
-  parser.add_argument('--recreate', action='store_true', default=False,
+  parser.add_argument('--recreate', action='store_true',
       help="If set, I'll first erase the current database")
-  parser.add_argument('--verbose', action='store_true', default=False,
+  parser.add_argument('--verbose', action='store_true',
       help="Do SQL operations in a verbose way")
   parser.add_argument('--list-directory', metavar='DIR',
       default = "/idiap/user/mguenther/GBU_FILE_LISTS",

@@ -18,7 +18,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-The GBU (Good, Bad and Ugly) database consists of parts of the MBGC-v1 image set.
+The GBU (Good, Bad and Ugly) database consists of parts of the MBGC-V1 image set.
 It defines three protocols, i.e., Good, Bad and Ugly for which different model and probe images are used.
 
 Installation
@@ -31,7 +31,7 @@ and download:
 Unfortunately, the directory structure in this image database changed. If you have an older version of it,
 and the ``bob_dbmanage.py gbu checkfiles --directory <YOUR_PATH_TO_MBGC-V1>`` fails (i.e. reports missing files), you have two possible options:
 
-* Download the XML lists that define the GBU sets from http://www.nist.gov/itl/iad/ig/focs.cfm and call
+* Download the GBU-sigsets.zip file from https://github.com/bioidiap/xbob.db.gbu/downloads, extract the zip file to a directory of your choice and call
   ``bob_dbmanage.py gbu create --recreate --list-directory <YOUR_PATH_TO_THE_XML_LISTS> --rescan-image-directory <YOUR_PATH_TO_MBGC-V1>``
   (you might need root access to recreate the database)
 
@@ -42,10 +42,21 @@ To be sure that the procedure succeeded, please call ``bob_dbmanage.py gbu check
 or ``bob_dbmanage.py gbu checkfiles --directory <NEW_IMAGE_PATH_TO_BE_CREATED>`` afterwards.
 If this fails again, your copy of the MBGC-V1 database is corrupted, and you might consider to get a new copy of it.
 
+.. note::
+  The lists from https://github.com/bioidiap/xbob.db.gbu/downloads contains the file lists as provided by the CSU Face Recognition Resources, see http://www.cs.colostate.edu/facerec/algorithms/baselines2011.php.
+  In these files, the directory structure is adapted to our (the latest?) version of the MBGC-V1 database.
 
-Usage
------
 
+Creating the annotation files compatible with other xbob databases
+------------------------------------------------------------------
+The hand-labeled annotations of the eyes are stored in the database itself (after reading them from the file lists, see above).
+Other databases provide the annotations in files, one file per image.
+To be compatible with other databases, you can create the annotation files by calling:
+``bob_dbmanage.py gbu create-annotation-files --directory <NEW_ANNOTATION_FILE_PATH_TO_BE_CREATED>``
+
+
+Specialties of this database interface
+--------------------------------------
 This implementation of the GBU database wrapper provides two different types of protocols:
 
 * 'gbu': In the original protocol models are extracted for each file. This means that there may be
