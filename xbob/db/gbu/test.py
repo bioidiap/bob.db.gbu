@@ -24,22 +24,23 @@ import os, sys
 import random
 import unittest
 import bob
+import xbob.db.gbu
 
-from . import Database, models
+from xbob.db.gbu.models import Client, File
 
 class GBUDatabaseTest(unittest.TestCase):
   """Performs some tests on the GBU database."""
 
   def test_clients(self):
-    """Tests that the 'clients()' and 'models()' functions return the desired number of elements"""
-    db = Database()
+    # Tests that the 'clients()', 'client_ids()', 'models()' and 'model_ids()' functions return the desired number of elements
+    db = xbob.db.gbu.Database()
 
     # the protocols training, dev, idiap
-    subworlds = models.Trainset.m_names
-    protocols = models.Protocol.m_names
+    subworlds = db.m_sub_worlds
+    protocols = db.m_protocols
 
     # client counter
-    self.assertEqual(len(db.clients()), 782)
+    self.assertEqual(len(db.client_ids()), 782)
     self.assertEqual(len(db.clients(groups='world')), 345)
     for subworld in subworlds:
       self.assertEqual(len(db.clients(groups='world', subworld=subworld)), 345)
@@ -49,89 +50,86 @@ class GBUDatabaseTest(unittest.TestCase):
       self.assertEqual(len(db.clients(groups='dev', protocol=protocol)), 437)
 
     # model counter
-    self.assertEqual(len(db.models(type='gbu', groups='world')), 2128)
-    self.assertEqual(len(db.models(type='multi', groups='world')), 345)
-    self.assertEqual(len(db.models(type='gbu', groups='dev')), 3255)
-    self.assertEqual(len(db.models(type='multi', groups='dev')), 437)
+    self.assertEqual(len(db.model_ids(protocol_type='gbu', groups='world')), 345)
+    self.assertEqual(len(db.model_ids(protocol_type='multi', groups='world')), 345)
+    self.assertEqual(len(db.model_ids(protocol_type='gbu', groups='dev')), 3255)
+    self.assertEqual(len(db.model_ids(protocol_type='multi', groups='dev')), 437)
     for subworld in subworlds:
-      self.assertEqual(len(db.models(type='multi', groups='world', subworld=subworld)), 345)
+      self.assertEqual(len(db.model_ids(protocol_type='multi', groups='world', subworld=subworld)), 345)
     for protocol in protocols:
-      self.assertEqual(len(db.models(type='gbu', groups='dev', protocol=protocol)), 1085)
-      self.assertEqual(len(db.models(type='multi', groups='dev', protocol=protocol)), 437)
+      self.assertEqual(len(db.model_ids(protocol_type='gbu', groups='dev', protocol=protocol)), 1085)
+      self.assertEqual(len(db.model_ids(protocol_type='multi', groups='dev', protocol=protocol)), 437)
 
     for protocol in protocols:
       # assert that all models of the 'gbu' protocol type
       #  start with "nd1R" or "nd2R", i.e., the file id
-      for model in db.models(type='gbu', protocol=protocol):
-        base = os.path.basename(model)
-        self.assertTrue(base[:2] == 'nd' and base[3] == 'R')
+      for model in db.models(protocol_type='gbu', protocol=protocol):
+        self.assertTrue(isinstance(model, File))
+        self.assertTrue(model.presentation[:2] == 'nd' and model.presentation[3] == 'R')
       # assert that all models of the 'multi' protocol type
       #  start with "nd1S", i.e., the client id
-      for model in db.models(type='multi', protocol=protocol):
-        self.assertTrue('nd1S' in model)
+      for model in db.models(protocol_type='multi', protocol=protocol):
+        self.assertTrue(isinstance(model, Client))
+        self.assertTrue('nd1S' in model.signature)
 
 
-  def test_files(self):
-    """Tests that the 'files()' function returns reasonable output"""
-    db = Database()
+  def test_objects(self):
+    # Tests that the 'objects()' function returns reasonable output
+    db = xbob.db.gbu.Database()
 
     # the training subworlds and the protocols
-    subworlds = models.Trainset.m_names
-    protocols = models.Protocol.m_names
-
-    # check that the number of models is identical to the number of files
-    # when 'gbu' protocol types are used
-    for subworld in subworlds:
-      self.assertEqual(len(db.files(groups='world', subworld=subworld)),
-                       len(db.models(type='gbu', groups='world', subworld=subworld)))
+    subworlds = db.m_sub_worlds
+    protocols = db.m_protocols
 
     for protocol in protocols:
       # The number of files for each purpose is equal to the number of models
-      self.assertEqual(len(db.files(groups='dev', protocol=protocol, purposes='enrol')),
-                       len(db.models(type='gbu', groups='dev', protocol=protocol)))
-      self.assertEqual(len(db.files(groups='dev', protocol=protocol, purposes='probe')),
-                       len(db.models(type='gbu', groups='dev', protocol=protocol)))
+      self.assertEqual(len(db.objects(groups='dev', protocol=protocol, purposes='enrol')),
+                       len(db.models(protocol_type='gbu', groups='dev', protocol=protocol)))
+      self.assertEqual(len(db.objects(groups='dev', protocol=protocol, purposes='probe')),
+                       len(db.models(protocol_type='gbu', groups='dev', protocol=protocol)))
 
     # The following tests might take a while...
     protocol = protocols[0]
-    probe_file_count = len(db.files(type='gbu', groups='dev', protocol=protocol, purposes='probe'))
-    # check that for 'gbu' protocol types, exactly one file per id is returned
-    for model_id in random.sample(db.models(type='gbu', groups='dev', protocol=protocol), 10):
+    probe_file_count = len(db.objects(protocol_type='gbu', groups='dev', protocol=protocol, purposes='probe'))
+    # check that for 'gbu' protocol types, exactly one file per model is returned
+    for model_id in random.sample(db.model_ids(protocol_type='gbu', groups='dev', protocol=protocol), 10):
       # assert that there is exactly one file for each enrol purposes per model
-      self.assertEqual(len(db.files(type='gbu', groups='dev', protocol=protocol, model_ids=[model_id], purposes='enrol')), 1)
+      self.assertEqual(len(db.objects(protocol_type='gbu', groups='dev', protocol=protocol, model_ids=[model_id], purposes='enrol')), 1)
       # probe files should always be the same
-      self.assertEqual(len(db.files(type='gbu', groups='dev', protocol=protocol, model_ids=[model_id], purposes='probe')), probe_file_count)
+      self.assertEqual(len(db.objects(protocol_type='gbu', groups='dev', protocol=protocol, model_ids=[model_id], purposes='probe')), probe_file_count)
 
-    # for the 'multi' protocols, there is AT LEAST one file per model
-    for model_id in random.sample(db.models(type='multi', groups='dev', protocol=protocol), 10):
+    # for the 'multi' protocols, there is AT LEAST one file per model (client)
+    for model_id in random.sample(db.model_ids(protocol_type='multi', groups='dev', protocol=protocol), 10):
       # assert that there is exactly one file for each enrol purposes per model
-      self.assertTrue(len(db.files(type='multi', groups='dev', protocol=protocol, model_ids=[model_id], purposes='enrol')) >= 1)
+      self.assertTrue(len(db.objects(protocol_type='multi', groups='dev', protocol=protocol, model_ids=[model_id], purposes='enrol')) >= 1)
       # probe files should always be the same
-      self.assertEqual(len(db.files(type='multi', groups='dev', protocol=protocol, model_ids=[model_id], purposes='probe')), probe_file_count)
+      self.assertEqual(len(db.objects(protocol_type='multi', groups='dev', protocol=protocol, model_ids=[model_id], purposes='probe')), probe_file_count)
 
 
   def test_file_ids(self):
-    """Tests that the client id's returned by the 'get_client_id_from_file_id()' and 'get_client_id_from_model_id()' functions are correct"""
-    db = Database()
+    # Tests that the client id's returned by the 'get_client_id_from_file_id()' and 'get_client_id_from_model_id()' functions are correct
+    db = xbob.db.gbu.Database()
 
-    # the training subworlds and the protocols
-    protocol = models.Protocol.m_names[0]
+    # we test only one of the protocols
+    protocol = random.sample(db.m_protocols,1)
 
     # for 'gbu' protocols, get_client_id_from_file_id and get_client_id_from_model_id should return the same value
-    for model_id in random.sample(db.models(type='gbu', groups='dev', protocol=protocol), 10):
-      for file_id in db.files(type='gbu', groups='dev', protocol=protocol, model_ids=[model_id], purposes='enrol'):
+    for model_id in random.sample(db.model_ids(protocol_type='gbu', groups='dev', protocol=protocol), 10):
+      for file in db.objects(protocol_type='gbu', groups='dev', protocol=protocol, model_ids=[model_id], purposes='enrol'):
         self.assertEqual(
-              db.get_client_id_from_file_id(file_id),
-              db.get_client_id_from_model_id(model_id, type='gbu'))
+              db.get_client_id_from_file_id(file.id),
+              db.get_client_id_from_model_id(model_id, protocol_type='gbu'))
 
-    for model_id in random.sample(db.models(type='multi', groups='dev', protocol=protocol), 10):
+    for model_id in random.sample(db.model_ids(protocol_type='multi', groups='dev', protocol=protocol), 10):
       # for 'multi' protocols, get_client_id_from_model_id should return the client id.
-      self.assertEqual(db.get_client_id_from_model_id(model_id, type='multi'), model_id)
-      # and also get_client_id_from_file_id should return the model id, both for enrol and probe sets
-      for file_id in db.files(type='multi', groups='dev', protocol=protocol, model_ids=[model_id], purposes='enrol'):
-        self.assertEqual(db.get_client_id_from_file_id(file_id), model_id)
+      self.assertEqual(db.get_client_id_from_model_id(model_id, protocol_type='multi'), model_id)
+      # and also get_client_id_from_file_id should return the model id
+      for file in db.objects(protocol_type='multi', groups='dev', protocol=protocol, model_ids=[model_id], purposes='enrol'):
+        self.assertEqual(db.get_client_id_from_file_id(file.id), model_id)
+
 
   def test_driver_api(self):
+    # Tests the functions of the driver API
     from bob.db.script.dbmanage import main
     self.assertEqual( main(['gbu', 'dumplist', '--self-test']), 0 )
     self.assertEqual( main(['gbu', 'checkfiles', '-d', '.', '--self-test']), 0 )

@@ -21,7 +21,6 @@
 GBU database in the most obvious ways.
 """
 
-from bob.db import utils
 from .models import *
 from .driver import Interface
 
@@ -29,7 +28,7 @@ INFO = Interface()
 SQLITE_FILE = INFO.files()[0]
 
 import os
-
+import bob
 
 
 class Database(object):
@@ -40,18 +39,38 @@ class Database(object):
   """
 
   def __init__(self):
-    # opens a session to the database - keep it open until the end
-    self.m_session = utils.session(INFO.type(), SQLITE_FILE)
+    # define some values that we will support
     self.m_groups  = ('world', 'dev') # GBU does not provide an eval set
-    self.m_train_sets = Trainset.m_names # Will be queried by the 'subworld' parameters
-    self.m_purposes = Protocol.m_purposes
-    self.m_protocols = Protocol.m_names
-    self.m_types = Protocol.m_types # The type of protocols: The default GBU or one with multiple files per model
+    self.m_sub_worlds = Subworld.subworld_choices # Will be queried by the 'subworld' parameters
+    self.m_purposes = Protocol.purpose_choices
+    self.m_protocols = Protocol.protocol_choices
+    self.m_protocol_types = ('gbu', 'multi') # The type of protocols: The default GBU or one with multiple files per model
+
+    # open a session to the database - keep it open until the end
+    self.connect()
+
+
+  def connect(self):
+    """Tries connecting or re-connecting to the database"""
+    if not os.path.exists(SQLITE_FILE):
+      self.m_session = None
+    else:
+      self.m_session = bob.db.utils.session_try_readonly(INFO.type(), SQLITE_FILE)
+
+  def is_valid(self):
+    """Returns if a valid session has been opened for reading the database"""
+    return self.m_session is not None
+
+  def assert_validity(self):
+    """Raise a RuntimeError if the database backend is not available"""
+    if not self.is_valid():
+      raise RuntimeError, "Database '%s' cannot be found at expected location '%s'. Create it and then try re-connecting using Database.connect()" % (INFO.name(), SQLITE_FILE)
+
 
   def __check_validity__(self, elements, description, possibilities, default = None):
     """Checks validity of user input data against a set of valid values"""
     if not elements:
-      return default if default else possibilities
+      return default
     if not isinstance(elements, list) and not isinstance(elements, tuple):
       return self.__check_validity__((elements,), description, possibilities, default)
     for k in elements:
@@ -70,16 +89,9 @@ class Database(object):
     if element not in possibilities:
       raise RuntimeError, 'The given %s "%s" is not allowed. Please choose one of %s' % (description, element, possibilities)
 
-  def __make_path__(self, file, directory, extension):
-    """Generates the file name for the given File object."""
-    stem = os.path.join(file.m_directory, file.m_filename)
-    if not extension: extension = ''
-    if directory: return os.path.join(directory, stem + extension)
-    return stem + extension
-
 
   def clients(self, groups=None, subworld=None, protocol=None):
-    """Returns a set of clients for the specific query by the user.
+    """Returns a list of clients for the specific query by the user.
 
     Keyword Parameters:
 
@@ -92,44 +104,60 @@ class Database(object):
     protocol
       One or several of the GBU protocols ('Good', 'Bad', 'Ugly'), only valid if group is 'dev'.
 
-
-    Returns: A list containing all the client id's which have the given
-    properties.
+    Returns: A list containing all the Client objects which have the desired properties.
     """
+    self.assert_validity()
 
-    groups = self.__check_validity__(groups, "group", self.m_groups)
-    subworld = self.__check_validity__(subworld, "training set", self.m_train_sets)
+    groups = self.__check_validity__(groups, "group", self.m_groups, self.m_groups)
+    subworld = self.__check_validity__(subworld, "sub-world", self.m_sub_worlds)
     protocol = self.__check_validity__(protocol, "protocol", self.m_protocols)
 
     retval = []
     # List of the clients
     if 'world' in groups:
-      q = self.m_session.query(Client).join(File).join(Trainset)\
-              .filter(Trainset.m_name.in_(subworld))
-      for client_id in [k.m_signature for k in q]:
-        retval.append(client_id)
+      query = self.m_session.query(Client).join(File).join(Subworld, File.subworlds)
+      if subworld:
+        query = query.filter(Subworld.name.in_(subworld))
+      retval.extend([client for client in query])
 
     if 'dev' in groups:
-      q = self.m_session.query(Client).join(File).join(Protocol)\
-              .filter(Protocol.m_name.in_(protocol))\
-              .filter(Protocol.m_purpose == 'enrol')
-      for client_id in [k.m_signature for k in q]:
-        retval.append(client_id)
+      query = self.m_session.query(Client).join(File).join(Protocol, File.protocols).filter(Protocol.purpose == 'enrol')
+      if protocol:
+        query = query.filter(Protocol.name.in_(protocol))
+      retval.extend([client for client in query])
 
     return retval
 
 
-  def models(self, type='gbu', groups=None, subworld=None, protocol=None):
-    """Returns a set of models for the specific query by the user.
-    The returned list depends on the type:
-
-    * for type 'gbu': A list containing file id's (there is one model per file)
-    * for type 'multi': A list containing client id's (there is one model per client)
+  def client_ids(self, groups=None, subworld=None, protocol=None):
+    """Returns a list of client ids for the specific query by the user.
 
     Keyword Parameters:
 
-    type
-      One protocol type from ('gbu', 'multi')
+    groups
+     One or several groups to which the models belong ('world', 'dev').
+
+    subworld
+      One or several training sets ('x1', 'x2', 'x4', 'x8'), only valid if group is 'world'.
+
+    protocol
+      One or several of the GBU protocols ('Good', 'Bad', 'Ugly'), only valid if group is 'dev'.
+
+    Returns: A list containing the ids of all clients which have the desired properties.
+    """
+    self.assert_validity()
+
+    return [client.id for client in self.clients(groups, subworld, protocol)]
+
+
+  def models(self, groups=None, subworld=None, protocol=None, protocol_type='gbu'):
+    """Returns a list of models for the specific query by the user.
+    The returned type of model depends on the protocol_type:
+
+    * 'gbu': A list containing File objects (there is one model per file)
+    * 'multi': A list containing Client objects (there is one model per client)
+
+    Keyword Parameters:
 
     groups
       One or several groups to which the models belong ('world', 'dev').
@@ -140,100 +168,149 @@ class Database(object):
     protocol
       One or several of the GBU protocols ('Good', 'Bad', 'Ugly'), only valid if group is 'dev'.
 
-    Returns: A list containing all the model id's belonging to the given group.
+    protocol_type
+      One protocol type from ('gbu', 'multi')
+
+    Returns: A list containing all the models belonging to the given group.
     """
+    self.assert_validity()
 
-    self.__check_single__(type, "types", self.m_types)
+    self.__check_single__(protocol_type, "types", self.m_protocol_types)
 
-    if type == 'multi':
+    if protocol_type == 'multi':
+      # clients and models are the same
       return self.clients(groups, subworld, protocol)
 
-    groups = self.__check_validity__(groups, "group", self.m_groups)
-    subworld = self.__check_validity__(subworld, "training set", self.m_train_sets)
+    groups = self.__check_validity__(groups, "group", self.m_groups, self.m_groups)
+    subworld = self.__check_validity__(subworld, "sub-world", self.m_sub_worlds)
     protocol = self.__check_validity__(protocol, "protocol", self.m_protocols)
 
     retval = []
-    # List of the
+    # query the files and extract their ids
     if 'world' in groups:
-      q = self.m_session.query(File).join(Trainset)\
-              .filter(Trainset.m_name.in_(subworld))
-      for file_id in [k.m_presentation for k in q]:
-        retval.append(file_id)
+      query = self.m_session.query(File).join(Subworld, File.subworlds)
+      if subworld:
+        query = query.filter(Subworld.name.in_(subworld))
+      retval.extend([file for file in query])
 
     if 'dev' in groups:
-      q = self.m_session.query(File).join(Protocol)\
-              .filter(Protocol.m_name.in_(protocol))\
-              .filter(Protocol.m_purpose == 'enrol')
-      for file_id in [k.m_presentation for k in q]:
-        retval.append(file_id)
+      query = self.m_session.query(File).join(Protocol, File.protocols).filter(Protocol.purpose == 'enrol')
+      if protocol:
+        query = query.filter(Protocol.name.in_(protocol))
+      retval.extend([file for file in query])
 
     return retval
 
 
-  def get_client_id_from_model_id(self, model_id, type='gbu'):
-    """Returns the client_id attached to the given model_id.
-    Dependent on the type, it is expected that
+  def model_ids(self, groups=None, subworld=None, protocol=None, protocol_type='gbu'):
+    """Returns a list of model ids for the specific query by the user.
+    The returned list depends on the protocol_type:
 
-    * model_id is a file_id, when type is 'gbu'
-    * model_id is a client_id, when type is 'multi'
+    * 'gbu': A list containing file id's (there is one model per file)
+    * 'multi': A list containing client id's (there is one model per client)
+
+    .. note:: for the 'world' group, model ids are ALWAYS client ids
+
+    Keyword Parameters:
+
+    groups
+      One or several groups to which the models belong ('world', 'dev').
+
+    subworld
+      One or several training sets ('x1', 'x2', 'x4', 'x8'), only valid if group is 'world'.
+
+    protocol
+      One or several of the GBU protocols ('Good', 'Bad', 'Ugly'), only valid if group is 'dev'.
+
+    protocol_type
+      One protocol type from ('gbu', 'multi')
+
+    Returns: A list containing all the model id's belonging to the given group.
+    """
+    self.assert_validity()
+
+    self.__check_single__(protocol_type, "types", self.m_protocol_types)
+
+    if protocol_type == 'multi':
+      # clients and models are the same
+      return self.client_ids(groups, subworld, protocol)
+
+    groups = self.__check_validity__(groups, "group", self.m_groups, self.m_groups)
+    subworld = self.__check_validity__(subworld, "sub-world", self.m_sub_worlds)
+    protocol = self.__check_validity__(protocol, "protocol", self.m_protocols)
+
+    retval = []
+    # for world group, we always have CLIENT IDS
+    if 'world' in groups:
+      query = self.m_session.query(Client).join(File).join(Subworld, File.subworlds)
+      if subworld:
+        query = query.filter(Subworld.name.in_(subworld))
+      retval.extend([client.id for client in query])
+
+    if 'dev' in groups:
+      query = self.m_session.query(File).join(Protocol, File.protocols).filter(Protocol.purpose == 'enrol')
+      if protocol:
+        query = query.filter(Protocol.name.in_(protocol))
+      retval.extend([file.id for file in query])
+
+    return retval
+
+
+  def get_client_id_from_file_id(self, file_id):
+    """Returns the client id (real client id) attached to the given file id
+
+    Keyword Parameters:
+
+    file_id
+      The file id to consider
+
+    Returns: The client_id attached to the given file_id
+    """
+    self.assert_validity()
+
+    query = self.m_session.query(File).filter(File.id == file_id)
+
+    assert query.count() == 1
+    return query.first().client_id
+
+
+  def get_client_id_from_model_id(self, model_id, group='dev', protocol_type='gbu'):
+    """Returns the client id attached to the given model id.
+    Dependent on the protocol type and the group, it is expected that
+
+    * model_id is a file id, when protocol type is 'gbu'
+    * model_id is a client id, when protocol type is 'multi' **or group is 'world'**
 
     Keyword Parameters:
 
     model_id
-      The model_id to consider
+      The model id to consider
 
-    type
+    group
+      The group to which the model belong, might be 'world' or 'dev'.
+
+    protocol_type
       One protocol type from ('gbu', 'multi')
 
 
     Returns: The client_id attached to the given model_id
     """
 
-    self.__check_single__(type, "types", self.m_types)
+    self.__check_single__(protocol_type, "protocol type", self.m_protocol_types)
+    self.__check_single__(group, "group", self.m_groups)
 
-    if type == 'multi':
+    if protocol_type == 'multi' or group == 'world':
+      # client and model ids are identical
       return model_id
-
-    q = self.m_session.query(Client).join(File)\
-            .filter(File.m_presentation == model_id)
-
-    assert q.count() == 1
-    return q.first().m_signature
+    else:
+      return self.get_client_id_from_file_id(model_id)
 
 
-  def get_client_id_from_file_id(self, file_id):
-    """Returns the client_id (real client id) attached to the given file_id
+
+  def objects(self, groups=None, subworld=None, protocol=None, purposes=None, model_ids=None, protocol_type='gbu'):
+    """Using the specified restrictions, this function returns a list of File objects.
 
     Keyword Parameters:
-
-    file_id
-      The file_id to consider
-
-    Returns: The client_id attached to the given file_id
-    """
-    q = self.m_session.query(File)\
-            .filter(File.m_presentation == file_id)
-
-    assert q.count() == 1
-    return q.first().m_signature
-
-
-  def objects(self, directory=None, extension=None, groups=None, subworld=None, protocol=None, purposes=None, model_ids=None, type='gbu'):
-    """Using the specified restrictions, this function returns a dictionary from file_ids to a tuple containing:
-
-    * 0: the resolved filename
-    * 1: the model id (if one (and only one) model_id is given, it is copied here, otherwise the model id of the file)
-    * 2: the claimed client id attached to the model (in case of the AR database: identical to 1)
-    * 3: the real client id (for a probe image, the client id of the probe, otherwise identical to 1)
-    * 4: the "stem" path (basename of the file; in case of the AR database: identical to the file id)
-
-    Keyword Parameters:
-
-    directory
-      A directory name that will be prepended to all file paths
-
-    extension
-      A filename extension that will be appended to all file paths
 
     groups
       One or several groups to which the models belong ('world', 'dev').
@@ -250,40 +327,33 @@ class Database(object):
 
     model_ids
       If given (as a list of model id's or a single one), only the objects
-      belonging to the specified model id is returned. If the purpose is 'probe',
-      the probe objects belonging to the given model ids are returned, i.e., ALL probe files.
-      The content of the model id is dependent on the type:
+      belonging to the specified model id is returned.
+      The content of the model id is dependent on the protocol type:
 
-      * model_id is a file_id, when type is 'gbu'
-      * model_id is a client_id, when type is 'multi', or when group is 'world'
+      * model id is a file id, when protocol type is 'gbu'
+      * model id is a client id, when protocol type is 'multi', **or when group is 'world'**
 
-    type
+    protocol_type
       One protocol type from ('gbu', 'multi'), only required when model_ids are specified
 
     """
 
-    def filter_model(query, type, model_ids):
+    def filter_model(query, protocol_type, model_ids):
       if model_ids and len(model_ids):
-        if type == 'gbu':
+        if protocol_type == 'gbu':
           # for GBU protocol type, model id's are file id's
-          query = query.filter(File.m_presentation.in_(model_ids))
+          query = query.filter(File.id.in_(model_ids))
         else:
           # for multi protocol type, model id's are client id's
-          query = query.filter(File.m_signature.in_(model_ids))
+          query = query.filter(File.client_id.in_(model_ids))
       return query
 
-    def object(file, claimed_client_id):
-      return (self.__make_path__(file, directory, extension),
-              file.m_presentation if type == 'gbu' else file.m_signature,
-              claimed_client_id,
-              file.m_signature,
-              os.path.join(file.m_directory, file.m_filename))
-
     # check that every parameter is as expected
-    groups = self.__check_validity__(groups, "group", self.m_groups)
-    subworld = self.__check_validity__(subworld, "subworld", self.m_train_sets)
+    groups = self.__check_validity__(groups, "group", self.m_groups, self.m_groups)
+    subworld = self.__check_validity__(subworld, "sub-world", self.m_sub_worlds)
     protocol = self.__check_validity__(protocol, "protocol", self.m_protocols)
-    purposes = self.__check_validity__(purposes, "purpose", self.m_purposes)
+    purposes = self.__check_validity__(purposes, "purpose", self.m_purposes, self.m_purposes)
+    self.__check_single__(protocol_type, 'protocol type', self.m_protocol_types)
 
     # This test would be nice, but it takes to much time...
 #    model_ids = self.__check_validity__(model_ids, 'model id', self.models(type,groups,subworld,protocol),[])
@@ -291,196 +361,42 @@ class Database(object):
     if isinstance(model_ids, str):
       model_ids = (model_ids,)
 
-    self.__check_single__(type, 'protocol type', self.m_types)
-
-    retval = {}
+    retval = []
 
     if 'world' in groups:
-      query = self.m_session.query(File).join(Trainset)\
-                  .filter(Trainset.m_name.in_(subworld))
-      # here, we always query client ids (which is done by taking the 'multi' protocol)
+      query = self.m_session.query(File).join(Subworld, File.subworlds)
+      if subworld:
+        query = query.filter(Subworld.name.in_(subworld))
+      # here, we always filter by client ids (which is done by taking the 'multi' protocol)
       query = filter_model(query, 'multi', model_ids)
-
-      for file in query:
-        retval[file.m_presentation] = object(file, file.m_signature)
+      retval.extend([file for file in query])
 
     if 'dev' in groups:
-      query = self.m_session.query(File).join(Protocol)\
-                  .filter(Protocol.m_name.in_(protocol))\
-                  .filter(Protocol.m_purpose.in_(purposes))
-      # filter model ids only when only the enrol objects are requested
-      if 'probe' not in purposes:
-        query = filter_model(query, type, model_ids)
+      if 'enrol' in purposes:
+        query = self.m_session.query(File).join(Protocol, File.protocols).filter(Protocol.purpose == 'enrol')
+        if protocol:
+          query = query.filter(Protocol.name.in_(protocol))
+        # filter model ids only when only the enrol objects are requested
+        if model_ids:
+          query = filter_model(query, protocol_type, model_ids)
+        retval.extend([file for file in query])
 
-      if model_ids and len(model_ids) == 1:
-        for file in query:
-          retval[file.m_presentation] = object(file, self.get_client_id_from_model_id(model_ids[0], type))
-      else:
-        for file in query:
-          retval[file.m_presentation] = object(file, file.m_signature)
+      if 'probe' in purposes:
+        query = self.m_session.query(File).join(Protocol, File.protocols).filter(Protocol.purpose == 'probe')
+        if protocol:
+          query = query.filter(Protocol.name.in_(protocol))
+        retval.extend([file for file in query])
 
     return retval
 
 
-  def files(self, directory=None, extension=None, groups=None, subworld=None, protocol=None, purposes=None, model_ids=None, type='gbu'):
-    """Returns a dictionary from file_ids to file paths using the specified restrictions:
+  def annotations(self, file_id):
+    """Returns the annotations for the given file id as a dictionary {'reye':(y,x), 'leye':(y,x)}."""
+    self.assert_validity()
 
-    Keyword Parameters:
-
-    directory
-      A directory name that will be prepended to all file paths
-
-    extension
-      A filename extension that will be appended to all file paths
-
-    groups
-      One or several groups to which the models belong ('world', 'dev').
-
-    subworld
-      One or several training sets ('x1', 'x2', 'x4', 'x8'), only valid if group is 'world'.
-
-    protocol
-      One or several of the GBU protocols ('Good', 'Bad', 'Ugly'), only valid if group is 'dev'.
-
-    purposes
-      One or several groups for which files should be retrieved ('enrol', 'probe'),
-      only valid when the group is 'dev'·
-
-    model_ids
-      If given (as a list of model id's or a single one), only the files
-      belonging to the specified model id is returned. The content of the model id
-      is dependent on the type:
-
-      * model_id is a file_id, when type is 'gbu'
-      * model_id is a client_id, when type is 'multi'
-
-    type
-      One protocol type from ('gbu', 'multi'), only required when model_ids are specified
-
-    """
-
-    # retrieve the objects
-    objects = self.objects(directory, extension, groups, subworld, protocol, purposes, model_ids, type)
-    # return the file names only
-    files = {}
-    for file_id, object in objects.iteritems():
-      files[file_id] = object[0]
-
-    return files
-
-
-  def annotations(self, directory=None, extension=None, groups=None, subworld=None, protocol=None, purposes=None):
-    """Returns a list of dictionary of the annotations  (positions of right eye ('reye') and left eye ('leye')) for the given query.
-
-    Returns:
-
-      A dictionary with the file id as key and:
-
-      * 1: The resolved file name
-      * 2: The annotations in a dictionary: 'reye':(y,x), 'leye':(y,x)
-
-    Keyword Parameters:
-
-    directory
-      A directory name that will be prepended to all file paths
-
-    extension
-      A filename extension that will be appended to all file paths
-
-    groups
-      One or several groups to which the models belong ('world', 'dev').
-
-    subworld
-      One or several training sets ('x1', 'x2', 'x4', 'x8'), only valid if group is 'world'.
-
-    protocol
-      One or several of the GBU protocols ('Good', 'Bad', 'Ugly'), only valid if group is 'dev'.
-
-    purposes
-      One or several groups for which files should be retrieved ('enrol', 'probe'),
-      only valid when the group is 'dev'·
-
-    """
-
-    def object(file):
-      return (self.__make_path__(file, directory, extension),
-              {'reye': (file.m_re_y, file.m_re_x), 'leye': (file.m_le_y, file.m_le_x)})
-
-    # check that every parameter is as expected
-    groups = self.__check_validity__(groups, "group", self.m_groups)
-    subworlds = self.__check_validity__(subworld, "subworld", self.m_train_sets)
-    protocols = self.__check_validity__(protocol, "protocol", self.m_protocols)
-    purposes = self.__check_validity__(purposes, "purpose", self.m_purposes)
-
-    positions = {}
-
-    if 'world' in groups:
-      query = self.m_session.query(File).join(Trainset)\
-                  .filter(Trainset.m_name.in_(subworlds))
-
-      for file in query:
-        positions[file.m_presentation] = object(file)
-
-    if 'dev' in groups:
-      query = self.m_session.query(File).join(Protocol)\
-                  .filter(Protocol.m_name.in_(protocols))\
-                  .filter(Protocol.m_purpose.in_(purposes))
-
-      for file in query:
-        positions[file.m_presentation] = object(file)
-
-    return positions
-
-
-  def save_one(self, file_id, obj, directory, extension):
-    """Saves a single object supporting the bob save() protocol.
-
-    This method will call save() on the given object using the correct
-    database filename stem for the given id.
-
-    Keyword Parameters:
-
-    file_id
-      The file_id of the object.
-
-    obj
-      The object that needs to be saved, respecting the bob save() protocol.
-
-    directory
-      This is the base directory to which you want to save the data. The
-      directory is tested for existence and created if it is not there with
-      os.makedirs().
-
-    extension
-      The extension determines the way the object will be saved.
-    """
-
-    import os
-    from ...io import save
-
-    query = self.m_session.query(File).filter(File.m_presentation == file_id)
+    query = self.m_session.query(Annotation).join(File).filter(File.id==file_id)
     assert query.count() == 1
-    filename = self.__make_path__(query.first(), directory, extension)
-    utils.makedirs_safe(os.path.dirname(filename))
-    save(obj, filename)
+    annotation = query.first()
 
-  def save(self, data, directory, extension):
-    """This method takes a dictionary of data and
-    saves it respecting to the given directory.
+    return {'reye': (annotation.re_y, annotation.re_x), 'leye': (annotation.le_y, annotation.le_x)}
 
-    Keyword Parameters:
-
-    data
-      A dictionary from file_id to the actual data to be saved.
-
-    directory
-      This is the base directory to which you want to save the data. The
-      directory is tested for existence and created if it is not there with
-      os.makedirs()
-
-    extension
-      The extension determines the way the data will be saved.
-    """
-
-    for key, value in data:
-      self.save_one(key, value, directory, extension)

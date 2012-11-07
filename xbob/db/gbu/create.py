@@ -42,15 +42,15 @@ def collect_files(directory, extension = '.jpg', subdirectory = None):
   return (filelist, dirlist)
 
 
-
-
 def add_files_and_protocols(session, list_dir, image_dir = None):
   """Add files (and clients) to the BANCA database."""
 
   import xml.sax
   class XmlFileReader (xml.sax.handler.ContentHandler):
     def __init__(self):
-      self.m_file = File()
+      self.m_signature = None
+      self.m_path = None
+      self.m_presentation = None
       self.m_file_list = []
 
     def startDocument(self):
@@ -61,23 +61,21 @@ def add_files_and_protocols(session, list_dir, image_dir = None):
 
     def startElement(self, name, attrs):
       if name == 'biometric-signature':
-        self.m_file.m_signature = attrs['name']
+        self.m_signature = attrs['name']
       elif name == 'presentation':
-        filename = attrs['file-name']
-        self.m_file.m_filename = os.path.splitext(os.path.basename(filename))[0]
-        self.m_file.m_directory = os.path.dirname(filename)
-        self.m_file.m_presentation = attrs['name']
+        self.m_path = os.path.splitext(attrs['file-name'])[0]
+        self.m_presentation = attrs['name']
       else:
         pass
 
     def endElement(self, name):
       if name == 'biometric-signature':
         # assert that everything was read correctly
-        assert self.m_file.m_signature and self.m_file.m_filename and self.m_file.m_presentation
+        assert self.m_signature is not None and self.m_path is not None and self.m_presentation is not None
         # add a file to the sessions
-        self.m_file_list.append(self.m_file)
+        self.m_file_list.append(File(self.m_presentation, self.m_signature, self.m_path))
         # new file
-        self.m_file = File()
+        self.m_presentation = self.m_signature = self.m_path = None
       else:
         pass
 
@@ -90,25 +88,7 @@ def add_files_and_protocols(session, list_dir, image_dir = None):
     # create xml reading instance
     handler = XmlFileReader()
     xml.sax.parse(xml_file, handler)
-    image_list = handler.m_file_list
-
-    if eye_file:
-      # generate temporary dictionary for faster read of the eye position file
-      image_dict={}
-      for image in image_list:
-        image_dict[image.m_filename] = image
-
-      # read the eye position list
-      f = open(eye_file)
-      for line in f:
-        entries=line.split(',')
-        assert len(entries) == 5
-        name = os.path.splitext(os.path.basename(entries[0]))[0]
-        # test if these eye positions belong to any file of this list
-        if name in image_dict:
-          image_dict[name].eyes(entries[1:])
-
-    return image_list
+    return handler.m_file_list
 
 
   def correct_dir(image_list, filenames, directories, extension = '.jpg'):
@@ -116,7 +96,7 @@ def add_files_and_protocols(session, list_dir, image_dir = None):
     # first, collect entries in a faster structure
     image_dict = {}
     for i in image_list:
-      image_dict[i.m_filename + extension] = i
+      image_dict[os.path.basename(i.path) + extension] = i
     # assert that we don't have duplicate entries
     assert len(image_dict) == len(image_list)
 
@@ -124,7 +104,7 @@ def add_files_and_protocols(session, list_dir, image_dir = None):
     for index in range(len(filenames)):
       if filenames[index] in image_dict:
         # copy the directory of the found image
-        image_dict[filenames[index]].m_directory = directories[index]
+        image_dict[filenames[index]].path = os.path.join(directories[index], image_dict[filenames[index]])
 
     # finally, do the other way around and check if every file has been found
     filenames_set = set()
@@ -135,7 +115,7 @@ def add_files_and_protocols(session, list_dir, image_dir = None):
 
     missing_files = []
     for i in image_list:
-      if i.m_filename + extension not in filenames_set:
+      if os.path.basename(i.path) + extension not in filenames_set:
         missing_files.append(i)
         print "The image '" + i.m_filename + extension + "' was not found in the given directory"
 
@@ -147,28 +127,23 @@ def add_files_and_protocols(session, list_dir, image_dir = None):
 #### Here the function really starts ######################################
 
   # first, read the file lists from XML files
-  train_sets = Trainset.m_names
-  protocols = Protocol.m_names
-  types = Protocol.m_types
-
-  eyes_file = os.path.join(list_dir, 'alleyes.csv')
+  sub_worlds = Subworld.subworld_choices
+  protocols = Protocol.protocol_choices
 
   train_lists = {}
   target_lists = {}
   query_lists = {}
 
-  for p in train_sets:
+  for p in sub_worlds:
     # Training files
-    train_lists[p] = read_list(os.path.join(list_dir, 'GBU_Training_Uncontrolled%s.xml'%p), eyes_file)
+    train_lists[p] = read_list(os.path.join(list_dir, 'GBU_Training_Uncontrolled%s.xml'%p))
 
   for p in protocols:
     # Target files
-    target_lists[p] = read_list(os.path.join(list_dir, 'GBU_%s_Target.xml'%p), eyes_file)
+    target_lists[p] = read_list(os.path.join(list_dir, 'GBU_%s_Target.xml'%p))
     # Query files
-    query_lists[p] = read_list(os.path.join(list_dir, 'GBU_%s_Query.xml'%p), eyes_file)
-  all_lists = [f for f in train_lists.itervalues()]
-  all_lists += [f for f in target_lists.itervalues()]
-  all_lists += [f for f in query_lists.itervalues()]
+    query_lists[p] = read_list(os.path.join(list_dir, 'GBU_%s_Query.xml'%p))
+  all_lists = [f for f in train_lists.itervalues()] + [f for f in target_lists.itervalues()] + [f for f in query_lists.itervalues()]
 
   # now, correct the directories according to the real image directory structure
   if image_dir:
@@ -182,43 +157,71 @@ def add_files_and_protocols(session, list_dir, image_dir = None):
 
   # Now, create file entries in the database and create clients and files
   clients = set()
-  files = set()
-  for l in all_lists:
-    for f in l:
-      if f.m_signature not in clients:
-        session.add(Client(f.m_signature))
-        clients.add(f.m_signature)
-      if f.m_presentation not in files:
-        session.add(f)
-        files.add(f.m_presentation)
+  files = {}
+  for list in all_lists:
+    for file in list:
+      if file.signature not in clients:
+        session.add(Client(file.signature))
+        clients.add(file.signature)
+      if file.presentation not in files:
+        session.add(file)
+        files[file.presentation] = file
 
   # training sets
-  for s in train_sets:
-    for f in train_lists[s]:
-      session.add(Trainset(s, f.m_presentation))
+  for name,list in train_lists.iteritems():
+    # add subworld
+    subworld = Subworld(name)
+    session.add(subworld)
+    session.flush()
+    session.refresh(subworld)
+    for file in list:
+      subworld.files.append(files[file.presentation])
 
   # protocols
-  for type in types:
-    for protocol in protocols:
-      # enroll files
-      for f in target_lists[protocol]:
-        session.add(Protocol(type, protocol, 'enrol', f.m_presentation))
+  for protocol in protocols:
+    target_protocol = Protocol(protocol, 'enrol')
+    session.add(target_protocol)
+    session.flush()
+    session.refresh(target_protocol)
+    # enroll files
+    for file in target_lists[protocol]:
+      target_protocol.files.append(files[file.presentation])
 
-      # probe files
-      for f in query_lists[protocol]:
-        session.add(Protocol(type, protocol, 'probe', f.m_presentation))
+    # probe files
+    query_protocol = Protocol(protocol, 'probe')
+    session.add(query_protocol)
+    session.flush()
+    session.refresh(query_protocol)
+    for file in query_lists[protocol]:
+      query_protocol.files.append(files[file.presentation])
+
+  # annotations
+  # for speed purposes, create a special dictionary from file name to file id
+  file_name_dict = {}
+  for file in files.itervalues():
+    file_name_dict[os.path.basename(file.path)] = file.id
+  # read the eye position list
+  eyes_file = os.path.join(list_dir, 'alleyes.csv')
+  f = open(eyes_file)
+  for line in f:
+    # skip first line
+    entries=line.split(',')
+    assert len(entries) == 5
+    name = os.path.splitext(os.path.basename(entries[0]))[0]
+    # test if these eye positions belong to any file of this list
+    if name in file_name_dict:
+      session.add(Annotation(file_name_dict[name], entries[1:]))
+
 
   # all right, that should be it.
 
 def create_tables(args):
   """Creates all necessary tables (only to be used at the first time)"""
 
-  import sqlalchemy
-  engine = sqlalchemy.create_engine(utils.connection_string(args.type, args.files[0]), echo=args.verbose)
-  Client.metadata.create_all(engine)
-  File.metadata.create_all(engine)
-  Trainset.metadata.create_all(engine)
-  Protocol.metadata.create_all(engine)
+  from bob.db.utils import create_engine_try_nolock
+
+  engine = create_engine_try_nolock(args.type, args.files[0], echo=(args.verbose >= 2))
+  Base.metadata.create_all(engine)
 
 # Driver API
 # ==========
@@ -242,6 +245,7 @@ def create(args):
   add_files_and_protocols(s, args.list_directory, args.rescan_image_directory)
   s.commit()
   s.close()
+
 
 def add_command(subparsers):
   """Add specific subcommands that the action "create" can use"""

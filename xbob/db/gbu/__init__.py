@@ -62,9 +62,7 @@ There are slight differences between the two protocol types:
 
 .. note::
 
-  To be consistent with other Bob databases, the default protocol type is 'multi'.
-  When you want to generate results comparable to literature,
-  you **always** have to specify type='gbu' when you query the database.
+  To be consistent with results published in literature, the default protocol type is 'gbu'.
 
 .. warning::
 
@@ -74,7 +72,7 @@ There are slight differences between the two protocol types:
 
 The three protocols 'Good', 'Bad' and 'Ugly' are provided for both protocol types.
 
-Additionally, there are four different training sets, called 'x1', 'x2', 'x4' and 'x8' with different
+Additionally, there are four different training sets (sub-worlds), called 'x1', 'x2', 'x4' and 'x8' with different
 numbers of training images (the number of training identities is the same for all training sets).
 
 The GBU protocols do only provide a 'dev' set, but no 'eval' set. The default measurement reported is the ROC curve on the 'dev' set.

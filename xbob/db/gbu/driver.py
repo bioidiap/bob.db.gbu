@@ -17,7 +17,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Commands this database can respond to.
+"""Commands the GBU database can respond to.
 """
 
 import os
@@ -34,20 +34,19 @@ def dumplist(args):
   from .query import Database
   db = Database()
 
-  r = db.files(
-      directory=args.directory,
-      extension=args.extension,
+  r = db.objects(
       groups=args.groups,
       subworld=args.subworld,
       protocol=args.protocol,
-      purposes=args.purposes)
+      purposes=args.purposes
+  )
 
   output = sys.stdout
   if args.selftest:
     output = utils.null()
 
-  for id, f in r.items():
-    output.write('%s\n' % (f,))
+  for file in r:
+    output.write('%s\n' % file.make_path(args.directory, args.extension))
 
   return 0
 
@@ -57,20 +56,21 @@ def checkfiles(args):
   from .query import Database
   db = Database()
 
-  r = db.files(
-      directory=args.directory,
-      extension=args.extension,
+  objects = db.objects(
       groups=args.groups,
       subworld=args.subworld,
       protocol=args.protocol,
-      purposes=args.purposes)
+      purposes=args.purposes
+  )
 
   # go through all files, check if they are available on the filesystem
   good = {}
   bad = {}
-  for id, f in r.items():
-    if os.path.exists(f): good[id] = f
-    else: bad[id] = f
+  for file in objects:
+    if os.path.exists(file.make_path(args.directory, args.extension)):
+      good[file.id] = file
+    else:
+      bad[file.id] = file
 
   # report
   output = sys.stdout
@@ -78,10 +78,10 @@ def checkfiles(args):
     output = utils.null()
 
   if bad:
-    for id, f in bad.items():
-      output.write('Cannot find file "%s"\n' % (f,))
+    for id, file in bad.items():
+      output.write('Cannot find file "%s"\n' % (file.make_path(args.directory, args.extension),))
     output.write('%d files (out of %d) were not found at "%s"\n' % \
-        (len(bad), len(r), args.directory))
+        (len(bad), len(objects), args.directory))
 
   return 0
 
@@ -103,12 +103,12 @@ def copy_image_files(args):
   # get the files of the database
   from .query import Database
   db = Database()
-  db_files = db.files(extension = '.jpg')
+  db_files = db.objects()
 
   # create a temporary structure for faster access
   temp_dict = {}
-  for file in db_files.itervalues():
-    temp_dict[os.path.splitext(os.path.basename(file))[0]] = file
+  for file in db_files:
+    temp_dict[os.path.basename(file.path)[0]] = file
 
   command = os.symlink if args.soft_link else shutil.copy
   print "Copying (or linking) files to directory", args.new_image_directory
@@ -118,7 +118,7 @@ def copy_image_files(args):
     if file_wo_extension in temp_dict:
       # get the files
       old_file = os.path.join(args.original_image_directory, dirlist[index], filelist[index])
-      new_file = os.path.join(args.new_image_directory, temp_dict[file_wo_extension])
+      new_file = temp_dict[file_wo_extension].make_path(args.new_image_directory, '.jpg')
       new_dir = os.path.dirname(new_file)
       if not os.path.exists(new_dir):
         os.makedirs(new_dir)
@@ -139,18 +139,18 @@ def create_annotation_files(args):
   output = sys.stdout
   if args.selftest:
     output = utils.null()
-    args.directory = tempfile.mkdtemp(prefix='bob_db_gbu_')
+    args.directory = tempfile.mkdtemp(prefix='xbob_db_gbu_')
 
   from .query import Database
   db = Database()
 
   # retrieve all files
-  annotations = db.annotations(directory=args.directory, extension=args.extension)
-  for annotation in annotations.itervalues():
-    filename = annotation[0]
+  files = db.objects()
+  for file in files:
+    filename = file.make_path(directory=args.directory, extension=args.extension)
     if not os.path.exists(os.path.dirname(filename)):
       os.makedirs(os.path.dirname(filename))
-    eyes = annotation[1]
+    eyes = db.annotations(file.id)
     f = open(filename, 'w')
     # write eyes in with annotations: right eye, left eye
     f.writelines('reye' + ' ' + str(eyes['reye'][1]) + ' ' + str(eyes['reye'][0]) + '\n')
@@ -199,15 +199,17 @@ class Interface(BaseInterface):
     from .create import add_command as create_command
     create_command(subparsers)
 
+    from .models import Protocol, Subworld
+
     # get the "dumplist" action from a submodule
     dump_list_parser = subparsers.add_parser('dumplist', help=dumplist.__doc__)
 
-    dump_list_parser.add_argument('-d', '--directory', help="if given, this path will be prepended to every entry returned (defaults to '%(default)s')")
-    dump_list_parser.add_argument('-e', '--extension', help="if given, this extension will be appended to every entry returned (defaults to '%(default)s')")
-    dump_list_parser.add_argument('-g', '--groups', help="if given, this value will limit the output files to those belonging to a particular group. (defaults to '%(default)s')", choices=('world', 'dev', ''))
-    dump_list_parser.add_argument('-s', '--subworld', help="if given, limits the dump to a particular subset of the data that corresponds to the given protocol (defaults to '%(default)s')", choices=('x1', 'x2', 'x4', 'x8', ''))
-    dump_list_parser.add_argument('-p', '--protocol', help="if given, limits the dump to a particular subset of the data that corresponds to the given protocol (defaults to '%(default)s')", choices=('Good', 'Bad', 'Ugly', ''))
-    dump_list_parser.add_argument('-u', '--purposes', help="if given, this value will limit the output files to those designed for the given purposes. (defaults to '%(default)s')", choices=('enrol', 'probe', ''))
+    dump_list_parser.add_argument('-d', '--directory', help="if given, this path will be prepended to every entry returned.")
+    dump_list_parser.add_argument('-e', '--extension', help="if given, this extension will be appended to every entry returned.")
+    dump_list_parser.add_argument('-g', '--groups', help="if given, this value will limit the output files to those belonging to a particular group.", choices=('world', 'dev'))
+    dump_list_parser.add_argument('-s', '--subworld', help="if given, limits the dump to a particular subworld of the data.", choices=Subworld.subworld_choices)
+    dump_list_parser.add_argument('-p', '--protocol', help="if given, limits the dump to a particular subset of the data that corresponds to the given protocol.", choices=Protocol.protocol_choices)
+    dump_list_parser.add_argument('-u', '--purposes', help="if given, this value will limit the output files to those designed for the given purposes.", choices=Protocol.purpose_choices)
     dump_list_parser.add_argument('--self-test', dest="selftest", action='store_true', help=argparse.SUPPRESS)
 
     dump_list_parser.set_defaults(func=dumplist) #action
@@ -215,12 +217,12 @@ class Interface(BaseInterface):
     # get the "checkfiles" action from a submodule
     check_files_parser = subparsers.add_parser('checkfiles', help=checkfiles.__doc__)
 
-    check_files_parser.add_argument('-d', '--directory', help="if given, this path will be prepended to every entry returned (defaults to '%(default)s')")
-    check_files_parser.add_argument('-e', '--extension', help="if given, this extension will be appended to every entry returned (defaults to '%(default)s')")
-    check_files_parser.add_argument('-g', '--groups', help="if given, this value will limit the output files to those belonging to a particular group. (defaults to '%(default)s')", choices=('world', 'dev', ''))
-    check_files_parser.add_argument('-s', '--subworld', help="if given, limits the dump to a particular subset of the data that corresponds to the given protocol (defaults to '%(default)s')", choices=('x1', 'x2', 'x4', 'x8', ''))
-    check_files_parser.add_argument('-p', '--protocol', help="if given, limits the dump to a particular subset of the data that corresponds to the given protocol (defaults to '%(default)s')", choices=('Good', 'Bad', 'Ugly', ''))
-    check_files_parser.add_argument('-u', '--purposes', help="if given, this value will limit the output files to those designed for the given purposes. (defaults to '%(default)s')", choices=('enrol', 'probe', ''))
+    check_files_parser.add_argument('-d', '--directory', help="if given, this path will be prepended to every entry returned.")
+    check_files_parser.add_argument('-e', '--extension', help="if given, this extension will be appended to every entry returned.")
+    check_files_parser.add_argument('-g', '--groups', help="if given, this value will limit the output files to those belonging to a particular group.)", choices=('world', 'dev', ''))
+    check_files_parser.add_argument('-s', '--subworld', help="if given, limits the dump to a particular subworld of the data", choices=Subworld.subworld_choices)
+    check_files_parser.add_argument('-p', '--protocol', help="if given, limits the dump to a particular subset of the data that corresponds to the given protocol.", choices=Protocol.protocol_choices)
+    check_files_parser.add_argument('-u', '--purposes', help="if given, this value will limit the output files to those designed for the given purposes.", choices=Protocol.purpose_choices)
     check_files_parser.add_argument('--self-test', dest="selftest", action='store_true', help=argparse.SUPPRESS)
 
     check_files_parser.set_defaults(func=checkfiles) #action
