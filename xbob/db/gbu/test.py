@@ -31,7 +31,7 @@ from xbob.db.gbu.models import Client, File
 class GBUDatabaseTest(unittest.TestCase):
   """Performs some tests on the GBU database."""
 
-  def test_clients(self):
+  def test01_clients(self):
     # Tests that the 'clients()', 'client_ids()', 'models()' and 'model_ids()' functions return the desired number of elements
     db = xbob.db.gbu.Database()
 
@@ -73,7 +73,7 @@ class GBUDatabaseTest(unittest.TestCase):
         self.assertTrue('nd1S' in model.signature)
 
 
-  def test_objects(self):
+  def test02_objects(self):
     # Tests that the 'objects()' function returns reasonable output
     db = xbob.db.gbu.Database()
 
@@ -106,7 +106,7 @@ class GBUDatabaseTest(unittest.TestCase):
       self.assertEqual(len(db.objects(protocol_type='multi', groups='dev', protocol=protocol, model_ids=[model_id], purposes='probe')), probe_file_count)
 
 
-  def test_file_ids(self):
+  def test03_file_ids(self):
     # Tests that the client id's returned by the 'get_client_id_from_file_id()' and 'get_client_id_from_model_id()' functions are correct
     db = xbob.db.gbu.Database()
 
@@ -128,7 +128,7 @@ class GBUDatabaseTest(unittest.TestCase):
         self.assertEqual(db.get_client_id_from_file_id(file.id), model_id)
 
 
-  def test_annotations(self):
+  def test04_annotations(self):
     # Tests that the annotations are available for all files
     db = xbob.db.gbu.Database()
 
@@ -142,7 +142,7 @@ class GBUDatabaseTest(unittest.TestCase):
         self.assertEqual(len(annotations['reye']), 2)
 
 
-  def test_driver_api(self):
+  def test05_driver_api(self):
     # Tests the functions of the driver API
     from bob.db.script.dbmanage import main
     self.assertEqual( main(['gbu', 'dumplist', '--self-test']), 0 )
