@@ -253,7 +253,7 @@ def add_command(subparsers):
   parser.add_argument('--verbose', action='store_true', default=False,
       help="Do SQL operations in a verbose way")
   parser.add_argument('--list-directory', metavar='DIR',
-      default = "/idiap/user/mguenther/GBU_FILE_LISTS",
+      default = "/idiap/group/biometric/databases/gbu",
       help="Change the relative path to the directory containing the list of the GBU database (defaults to %(default)s)")
   parser.add_argument('--rescan-image-directory', metavar='DIR',
 #      default='/idiap/resource/database/MBGC-V1',
