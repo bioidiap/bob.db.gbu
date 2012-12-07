@@ -65,12 +65,10 @@ class GBUDatabaseTest(unittest.TestCase):
       #  start with "nd1R" or "nd2R", i.e., the file id
       for model in db.models(protocol_type='gbu', protocol=protocol):
         self.assertTrue(isinstance(model, File))
-        self.assertTrue(model.presentation[:2] == 'nd' and model.presentation[3] == 'R')
       # assert that all models of the 'multi' protocol type
       #  start with "nd1S", i.e., the client id
       for model in db.models(protocol_type='multi', protocol=protocol):
         self.assertTrue(isinstance(model, Client))
-        self.assertTrue('nd1S' in model.signature)
 
 
   def test02_objects(self):
@@ -133,9 +131,9 @@ class GBUDatabaseTest(unittest.TestCase):
     db = xbob.db.gbu.Database()
 
     # we test only one of the protocols
-    for protocol in db.m_protocols:
+    for protocol in random.sample(db.m_protocols, 1):
       files = db.objects(protocol=protocol)
-      for file in files:
+      for file in random.sample(files, 1000):
         annotations = db.annotations(file.id)
         self.assertTrue('leye' in annotations and 'reye' in annotations)
         self.assertEqual(len(annotations['leye']), 2)
@@ -147,5 +145,6 @@ class GBUDatabaseTest(unittest.TestCase):
     from bob.db.script.dbmanage import main
     self.assertEqual( main(['gbu', 'dumplist', '--self-test']), 0 )
     self.assertEqual( main(['gbu', 'checkfiles', '-d', '.', '--self-test']), 0 )
-    self.assertEqual( main(['gbu', 'create-annotation-files', '-d', '.', '--self-test']), 0 )
+    # This function is deprecated, so we don't test it any more.
+    #self.assertEqual( main(['gbu', 'create-annotation-files', '-d', '.', '--self-test']), 0 )
 

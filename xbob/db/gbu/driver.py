@@ -133,7 +133,10 @@ def copy_image_files(args):
 def create_annotation_files(args):
   """Creates the eye position files for the GBU database
   (using the eye positions stored in the database),
-  so that GBU shares the same structure as other databases."""
+  so that GBU shares the same structure as other databases.
+
+  This function is deprecated, please do not use it anymore.
+  """
 
   # report
   output = sys.stdout

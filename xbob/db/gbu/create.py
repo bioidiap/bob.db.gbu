@@ -197,9 +197,9 @@ def add_files_and_protocols(session, list_dir, image_dir = None):
 
   # annotations
   # for speed purposes, create a special dictionary from file name to file id
-  file_name_dict = {}
+  file_id_dict = {}
   for file in files.itervalues():
-    file_name_dict[os.path.basename(file.path)] = file.id
+    file_id_dict[os.path.basename(file.path)] = file.id
   # read the eye position list
   eyes_file = os.path.join(list_dir, 'alleyes.csv')
   f = open(eyes_file)
@@ -209,8 +209,8 @@ def add_files_and_protocols(session, list_dir, image_dir = None):
     assert len(entries) == 5
     name = os.path.splitext(os.path.basename(entries[0]))[0]
     # test if these eye positions belong to any file of this list
-    if name in file_name_dict:
-      session.add(Annotation(file_name_dict[name], entries[1:]))
+    if name in file_id_dict:
+      session.add(Annotation(file_id_dict[name], entries[1:]))
 
 
   # all right, that should be it.

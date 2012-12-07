@@ -26,6 +26,8 @@ from bob.db.sqlalchemy_migration import Enum, relationship
 from sqlalchemy.orm import backref
 from sqlalchemy.ext.declarative import declarative_base
 
+import xbob.db.verification.utils
+
 Base = declarative_base()
 
 def client_id_from_signature(signature):
@@ -38,10 +40,8 @@ class Client(Base):
   __tablename__ = 'client'
 
   id = Column(Integer, primary_key=True)
-  signature = Column(String(9), unique=True) # The client signature; should start with nd1
 
   def __init__(self, signature):
-    self.signature = signature
     self.id = client_id_from_signature(signature)
 
   def __repr__(self):
@@ -54,15 +54,15 @@ class Annotation(Base):
   __tablename__ = 'annotation'
 
   id = Column(Integer, primary_key=True)
-  file_id = Column(String(9), ForeignKey('file.id'))
+  file_id = Column(Integer, ForeignKey('file.id'))
 
   le_x = Column(Integer) # left eye
   le_y = Column(Integer)
   re_x = Column(Integer) # right eye
   re_y = Column(Integer)
 
-  def __init__(self, presentation, eyes):
-    self.file_id = presentation
+  def __init__(self, file_id, eyes):
+    self.file_id = file_id
 
     assert len(eyes) == 4
     self.re_x = int(eyes[0])
@@ -70,11 +70,17 @@ class Annotation(Base):
     self.le_x = int(eyes[2])
     self.le_y = int(eyes[3])
 
+
+  def __call__(self):
+    """Returns the annotations of this database in a dictionary: {'reye' : (re_y, re_x), 'leye' : (le_y, le_x)}."""
+    return {'reye' : (self.re_y, self.re_x), 'leye' : (self.le_y, self.le_x) }
+
+
   def __repr__(self):
     return "<Annotation('%s': 'reye'=%dx%d, 'leye'=%dx%d)>" % (self.file_id, self.re_y, self.re_x, self.le_y, self.le_x)
 
 
-class File(Base):
+class File(Base, xbob.db.verification.utils.File):
   """The file of the GBU database consists of an integral id
   as well as the 'presentation' as read from the file lists.
   Each file has one annotation and one associated client."""
@@ -84,61 +90,16 @@ class File(Base):
   client_id = Column(Integer, ForeignKey('client.id')) # The client id; should start with nd1
   path = Column(String(100), unique=True) # The relative path where to find the file
 
-  presentation = Column(String(9), unique=True) # The signature of the file; should start with nd2
   client = relationship("Client", backref=backref("files", order_by=id))
   # one-to-one relationship between annotations and files
   annotation = relationship("Annotation", backref=backref("file", order_by=id, uselist=False), uselist=False)
 
   def __init__(self, presentation, signature, path):
-    self.presentation = presentation
-    self.client_id = client_id_from_signature(signature)
-    self.path = path
-    # signature is not stored, but needed for creation
+    # call base class function
+    xbob.db.verification.utils.File.__init__(self, client_id = client_id_from_signature(signature), path = path)
+    # signature and presentation are not stored, but needed for creation
     self.signature = signature
-
-  def __repr__(self):
-    return "<File('%s': %s , %d)>" % (self.presentation, self.path, self.client_id)
-
-  def make_path(self, directory=None, extension=None):
-    """Wraps the current path so that a complete path is formed
-
-    Keyword parameters:
-
-    directory
-      An optional directory name that will be prefixed to the returned result.
-
-    extension
-      An optional extension that will be suffixed to the returned filename. The
-      extension normally includes the leading ``.`` character as in ``.jpg`` or
-      ``.hdf5``.
-
-    Returns a string containing the newly generated file path.
-    """
-    if not directory: directory = ''
-    if not extension: extension = ''
-
-    return os.path.join(directory, self.path + extension)
-
-  def save(self, data, directory=None, extension='.hdf5'):
-    """Saves the input data at the specified location and using the given
-    extension.
-
-    Keyword parameters:
-
-    data
-      The data blob to be saved (normally a :py:class:`numpy.ndarray`).
-
-    directory
-      If not empty or None, this directory is prefixed to the final file
-      destination
-
-    extension
-      The extension of the filename - this will control the type of output and
-      the codec for saving the input blob.
-    """
-    path = self.make_path(directory, extension)
-    bob.utils.makedirs_safe(os.path.dirname(path))
-    bob.io.save(data, path)
+    self.presentation = presentation
 
 
 # The subworld file association table is used as a many-to-many relationship between files and sub-worlds.

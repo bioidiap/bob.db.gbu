@@ -24,14 +24,14 @@ GBU database in the most obvious ways.
 from .models import *
 from .driver import Interface
 
-INFO = Interface()
-SQLITE_FILE = INFO.files()[0]
+SQLITE_FILE = Interface().files()[0]
 
 import os
 import bob
 
+import xbob.db.verification.utils
 
-class Database(object):
+class Database(xbob.db.verification.utils.SQLiteDatabase):
   """The dataset class opens and maintains a connection opened to the Database.
 
   It provides many different ways to probe for the characteristics of the data
@@ -39,55 +39,15 @@ class Database(object):
   """
 
   def __init__(self):
+    # call base class constructor
+    xbob.db.verification.utils.SQLiteDatabase.__init__(self, SQLITE_FILE)
+
     # define some values that we will support
     self.m_groups  = ('world', 'dev') # GBU does not provide an eval set
     self.m_sub_worlds = Subworld.subworld_choices # Will be queried by the 'subworld' parameters
     self.m_purposes = Protocol.purpose_choices
     self.m_protocols = Protocol.protocol_choices
     self.m_protocol_types = ('gbu', 'multi') # The type of protocols: The default GBU or one with multiple files per model
-
-    # open a session to the database - keep it open until the end
-    self.connect()
-
-
-  def connect(self):
-    """Tries connecting or re-connecting to the database"""
-    if not os.path.exists(SQLITE_FILE):
-      self.m_session = None
-    else:
-      self.m_session = bob.db.utils.session_try_readonly(INFO.type(), SQLITE_FILE)
-
-  def is_valid(self):
-    """Returns if a valid session has been opened for reading the database"""
-    return self.m_session is not None
-
-  def assert_validity(self):
-    """Raise a RuntimeError if the database backend is not available"""
-    if not self.is_valid():
-      raise RuntimeError, "Database '%s' cannot be found at expected location '%s'. Create it and then try re-connecting using Database.connect()" % (INFO.name(), SQLITE_FILE)
-
-
-  def __check_validity__(self, elements, description, possibilities, default = None):
-    """Checks validity of user input data against a set of valid values"""
-    if not elements:
-      return default
-    if not isinstance(elements, list) and not isinstance(elements, tuple):
-      return self.__check_validity__((elements,), description, possibilities, default)
-    for k in elements:
-      if k not in possibilities:
-        raise RuntimeError, 'Invalid %s "%s". Valid values are %s, or lists/tuples of those' % (description, k, possibilities)
-    return elements
-
-  def __check_single__(self, element, description, possibilities):
-    """Checks validity of user input data against a set of valid values"""
-    if not element:
-      raise RuntimeError, 'Please select one element from %s for %s' % (possibilities, description)
-    if isinstance(element,tuple) or isinstance (element,list):
-      if len(element) > 1:
-        raise RuntimeError, 'For %s, only single elements from %s are allowed' % (description, possibilities)
-      element = element[0]
-    if element not in possibilities:
-      raise RuntimeError, 'The given %s "%s" is not allowed. Please choose one of %s' % (description, element, possibilities)
 
 
   def clients(self, groups=None, subworld=None, protocol=None):
@@ -106,22 +66,20 @@ class Database(object):
 
     Returns: A list containing all the Client objects which have the desired properties.
     """
-    self.assert_validity()
-
-    groups = self.__check_validity__(groups, "group", self.m_groups, self.m_groups)
-    subworld = self.__check_validity__(subworld, "sub-world", self.m_sub_worlds)
-    protocol = self.__check_validity__(protocol, "protocol", self.m_protocols)
+    groups = self.check_parameters_for_validity(groups, "group", self.m_groups)
+    subworld = self.check_parameters_for_validity(subworld, "sub-world", self.m_sub_worlds)
+    protocol = self.check_parameters_for_validity(protocol, "protocol", self.m_protocols)
 
     retval = []
     # List of the clients
     if 'world' in groups:
-      query = self.m_session.query(Client).join(File).join(Subworld, File.subworlds)
+      query = self.query(Client).join(File).join(Subworld, File.subworlds)
       if subworld:
         query = query.filter(Subworld.name.in_(subworld))
       retval.extend([client for client in query])
 
     if 'dev' in groups:
-      query = self.m_session.query(Client).join(File).join(Protocol, File.protocols).filter(Protocol.purpose == 'enrol')
+      query = self.query(Client).join(File).join(Protocol, File.protocols).filter(Protocol.purpose == 'enrol')
       if protocol:
         query = query.filter(Protocol.name.in_(protocol))
       retval.extend([client for client in query])
@@ -173,28 +131,26 @@ class Database(object):
 
     Returns: A list containing all the models belonging to the given group.
     """
-    self.assert_validity()
-
-    self.__check_single__(protocol_type, "types", self.m_protocol_types)
+    protocol_type = self.check_parameter_for_validity(protocol_type, "types", self.m_protocol_types)
 
     if protocol_type == 'multi':
       # clients and models are the same
       return self.clients(groups, subworld, protocol)
 
-    groups = self.__check_validity__(groups, "group", self.m_groups, self.m_groups)
-    subworld = self.__check_validity__(subworld, "sub-world", self.m_sub_worlds)
-    protocol = self.__check_validity__(protocol, "protocol", self.m_protocols)
+    groups = self.check_parameters_for_validity(groups, "group", self.m_groups)
+    subworld = self.check_parameters_for_validity(subworld, "sub-world", self.m_sub_worlds)
+    protocol = self.check_parameters_for_validity(protocol, "protocol", self.m_protocols)
 
     retval = []
     # query the files and extract their ids
     if 'world' in groups:
-      query = self.m_session.query(File).join(Subworld, File.subworlds)
+      query = self.query(File).join(Subworld, File.subworlds)
       if subworld:
         query = query.filter(Subworld.name.in_(subworld))
       retval.extend([file for file in query])
 
     if 'dev' in groups:
-      query = self.m_session.query(File).join(Protocol, File.protocols).filter(Protocol.purpose == 'enrol')
+      query = self.query(File).join(Protocol, File.protocols).filter(Protocol.purpose == 'enrol')
       if protocol:
         query = query.filter(Protocol.name.in_(protocol))
       retval.extend([file for file in query])
@@ -227,28 +183,26 @@ class Database(object):
 
     Returns: A list containing all the model id's belonging to the given group.
     """
-    self.assert_validity()
-
-    self.__check_single__(protocol_type, "types", self.m_protocol_types)
+    protocol_type = self.check_parameter_for_validity(protocol_type, "types", self.m_protocol_types)
 
     if protocol_type == 'multi':
       # clients and models are the same
       return self.client_ids(groups, subworld, protocol)
 
-    groups = self.__check_validity__(groups, "group", self.m_groups, self.m_groups)
-    subworld = self.__check_validity__(subworld, "sub-world", self.m_sub_worlds)
-    protocol = self.__check_validity__(protocol, "protocol", self.m_protocols)
+    groups = self.check_parameters_for_validity(groups, "group", self.m_groups)
+    subworld = self.check_parameters_for_validity(subworld, "sub-world", self.m_sub_worlds)
+    protocol = self.check_parameters_for_validity(protocol, "protocol", self.m_protocols)
 
     retval = []
     # for world group, we always have CLIENT IDS
     if 'world' in groups:
-      query = self.m_session.query(Client).join(File).join(Subworld, File.subworlds)
+      query = self.query(Client).join(File).join(Subworld, File.subworlds)
       if subworld:
         query = query.filter(Subworld.name.in_(subworld))
       retval.extend([client.id for client in query])
 
     if 'dev' in groups:
-      query = self.m_session.query(File).join(Protocol, File.protocols).filter(Protocol.purpose == 'enrol')
+      query = self.query(File).join(Protocol, File.protocols).filter(Protocol.purpose == 'enrol')
       if protocol:
         query = query.filter(Protocol.name.in_(protocol))
       retval.extend([file.id for file in query])
@@ -268,7 +222,7 @@ class Database(object):
     """
     self.assert_validity()
 
-    query = self.m_session.query(File).filter(File.id == file_id)
+    query = self.query(File).filter(File.id == file_id)
 
     assert query.count() == 1
     return query.first().client_id
@@ -296,8 +250,8 @@ class Database(object):
     Returns: The client_id attached to the given model_id
     """
 
-    self.__check_single__(protocol_type, "protocol type", self.m_protocol_types)
-    self.__check_single__(group, "group", self.m_groups)
+    protocol_type = self.check_parameter_for_validity(protocol_type, "protocol type", self.m_protocol_types)
+    group = self.check_parameter_for_validity(group, "group", self.m_groups)
 
     if protocol_type == 'multi' or group == 'world':
       # client and model ids are identical
@@ -349,22 +303,21 @@ class Database(object):
       return query
 
     # check that every parameter is as expected
-    groups = self.__check_validity__(groups, "group", self.m_groups, self.m_groups)
-    subworld = self.__check_validity__(subworld, "sub-world", self.m_sub_worlds)
-    protocol = self.__check_validity__(protocol, "protocol", self.m_protocols)
-    purposes = self.__check_validity__(purposes, "purpose", self.m_purposes, self.m_purposes)
-    self.__check_single__(protocol_type, 'protocol type', self.m_protocol_types)
+    groups = self.check_parameters_for_validity(groups, "group", self.m_groups)
+    subworld = self.check_parameters_for_validity(subworld, "sub-world", self.m_sub_worlds)
+    protocol = self.check_parameters_for_validity(protocol, "protocol", self.m_protocols)
+    purposes = self.check_parameters_for_validity(purposes, "purpose", self.m_purposes)
+    protocol_type = self.check_parameter_for_validity(protocol_type, 'protocol type', self.m_protocol_types)
 
-    # This test would be nice, but it takes to much time...
-#    model_ids = self.__check_validity__(model_ids, 'model id', self.models(type,groups,subworld,protocol),[])
-    # so we do not check that the given model id's are valid...
     if isinstance(model_ids, str):
       model_ids = (model_ids,)
+    # check that the model ids are in the actual set of model ids (for the type of protocol that we are currently using)
+    model_ids = self.check_parameters_for_validity(model_ids, 'model id', self.model_ids(groups=groups, subworld=subworld, protocol=protocol, protocol_type=protocol_type),[])
 
     retval = []
 
     if 'world' in groups:
-      query = self.m_session.query(File).join(Subworld, File.subworlds)
+      query = self.query(File).join(Subworld, File.subworlds)
       if subworld:
         query = query.filter(Subworld.name.in_(subworld))
       # here, we always filter by client ids (which is done by taking the 'multi' protocol)
@@ -373,7 +326,7 @@ class Database(object):
 
     if 'dev' in groups:
       if 'enrol' in purposes:
-        query = self.m_session.query(File).join(Protocol, File.protocols).filter(Protocol.purpose == 'enrol')
+        query = self.query(File).join(Protocol, File.protocols).filter(Protocol.purpose == 'enrol')
         if protocol:
           query = query.filter(Protocol.name.in_(protocol))
         # filter model ids only when only the enrol objects are requested
@@ -382,7 +335,7 @@ class Database(object):
         retval.extend([file for file in query])
 
       if 'probe' in purposes:
-        query = self.m_session.query(File).join(Protocol, File.protocols).filter(Protocol.purpose == 'probe')
+        query = self.query(File).join(Protocol, File.protocols).filter(Protocol.purpose == 'probe')
         if protocol:
           query = query.filter(Protocol.name.in_(protocol))
         retval.extend([file for file in query])
@@ -394,9 +347,10 @@ class Database(object):
     """Returns the annotations for the given file id as a dictionary {'reye':(y,x), 'leye':(y,x)}."""
     self.assert_validity()
 
-    query = self.m_session.query(Annotation).join(File).filter(File.id==file_id)
+    query = self.query(Annotation).join(File).filter(File.id==file_id)
     assert query.count() == 1
     annotation = query.first()
 
-    return {'reye': (annotation.re_y, annotation.re_x), 'leye': (annotation.le_y, annotation.le_x)}
+    # return the annotations as returned by the call function of the Annotation object
+    return annotation()
 
