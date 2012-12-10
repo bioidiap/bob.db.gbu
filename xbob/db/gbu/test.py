@@ -143,8 +143,9 @@ class GBUDatabaseTest(unittest.TestCase):
   def test05_driver_api(self):
     # Tests the functions of the driver API
     from bob.db.script.dbmanage import main
-    self.assertEqual( main(['gbu', 'dumplist', '--self-test']), 0 )
-    self.assertEqual( main(['gbu', 'checkfiles', '-d', '.', '--self-test']), 0 )
+    self.assertEqual( main('gbu dumplist --self-test'.split()), 0 )
+    self.assertEqual( main('gbu dumplist --group=dev --subworld=x8 --protocol=Good --purpose=enrol --self-test'.split()), 0 )
+    self.assertEqual( main('gbu checkfiles --self-test'.split()), 0 )
     # This function is deprecated, so we don't test it any more.
     #self.assertEqual( main(['gbu', 'create-annotation-files', '-d', '.', '--self-test']), 0 )
 

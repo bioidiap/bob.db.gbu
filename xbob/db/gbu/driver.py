@@ -35,10 +35,10 @@ def dumplist(args):
   db = Database()
 
   r = db.objects(
-      groups=args.groups,
+      groups=args.group,
       subworld=args.subworld,
       protocol=args.protocol,
-      purposes=args.purposes
+      purposes=args.purpose
   )
 
   output = sys.stdout
@@ -56,12 +56,7 @@ def checkfiles(args):
   from .query import Database
   db = Database()
 
-  objects = db.objects(
-      groups=args.groups,
-      subworld=args.subworld,
-      protocol=args.protocol,
-      purposes=args.purposes
-  )
+  objects = db.objects()
 
   # go through all files, check if they are available on the filesystem
   good = {}
@@ -138,6 +133,8 @@ def create_annotation_files(args):
   This function is deprecated, please do not use it anymore.
   """
 
+  print >> sys.stderr, "Warning: this function is deprecated. Please use the Database.annotations() function to get the annotations."
+
   # report
   output = sys.stdout
   if args.selftest:
@@ -204,50 +201,39 @@ class Interface(BaseInterface):
 
     from .models import Protocol, Subworld
 
-    # get the "dumplist" action from a submodule
+    # the "dumplist" action
     dump_list_parser = subparsers.add_parser('dumplist', help=dumplist.__doc__)
-
     dump_list_parser.add_argument('-d', '--directory', help="if given, this path will be prepended to every entry returned.")
     dump_list_parser.add_argument('-e', '--extension', help="if given, this extension will be appended to every entry returned.")
-    dump_list_parser.add_argument('-g', '--groups', help="if given, this value will limit the output files to those belonging to a particular group.", choices=('world', 'dev'))
+    dump_list_parser.add_argument('-g', '--group', help="if given, this value will limit the output files to those belonging to a particular group.", choices=('world', 'dev'))
     dump_list_parser.add_argument('-s', '--subworld', help="if given, limits the dump to a particular subworld of the data.", choices=Subworld.subworld_choices)
     dump_list_parser.add_argument('-p', '--protocol', help="if given, limits the dump to a particular subset of the data that corresponds to the given protocol.", choices=Protocol.protocol_choices)
-    dump_list_parser.add_argument('-u', '--purposes', help="if given, this value will limit the output files to those designed for the given purposes.", choices=Protocol.purpose_choices)
+    dump_list_parser.add_argument('-u', '--purpose', help="if given, this value will limit the output files to those designed for the given purposes.", choices=Protocol.purpose_choices)
     dump_list_parser.add_argument('--self-test', dest="selftest", action='store_true', help=argparse.SUPPRESS)
-
     dump_list_parser.set_defaults(func=dumplist) #action
 
-    # get the "checkfiles" action from a submodule
+    # the "checkfiles" action
     check_files_parser = subparsers.add_parser('checkfiles', help=checkfiles.__doc__)
-
     check_files_parser.add_argument('-d', '--directory', help="if given, this path will be prepended to every entry returned.")
     check_files_parser.add_argument('-e', '--extension', help="if given, this extension will be appended to every entry returned.")
-    check_files_parser.add_argument('-g', '--groups', help="if given, this value will limit the output files to those belonging to a particular group.)", choices=('world', 'dev', ''))
-    check_files_parser.add_argument('-s', '--subworld', help="if given, limits the dump to a particular subworld of the data", choices=Subworld.subworld_choices)
-    check_files_parser.add_argument('-p', '--protocol', help="if given, limits the dump to a particular subset of the data that corresponds to the given protocol.", choices=Protocol.protocol_choices)
-    check_files_parser.add_argument('-u', '--purposes', help="if given, this value will limit the output files to those designed for the given purposes.", choices=Protocol.purpose_choices)
     check_files_parser.add_argument('--self-test', dest="selftest", action='store_true', help=argparse.SUPPRESS)
 
     check_files_parser.set_defaults(func=checkfiles) #action
 
-    # get the "copy-image-files" action from a submodule
+    # the "copy-image-files" action
     copy_image_files_parser = subparsers.add_parser('copy-image-files', help=copy_image_files.__doc__)
-
     copy_image_files_parser.add_argument('-d', '--original-image-directory', metavar='DIR', required=True, help="Specify the image directory containing the MBGC-V1 images.")
-    copy_image_files_parser.add_argument('-e', '--original-image-extension', metavar='EXT', default = '.jpg', help="The extension of the images in the database (defaults to '%(default)s')")
+    copy_image_files_parser.add_argument('-e', '--original-image-extension', metavar='EXT', default = '.jpg', help="The extension of the images in the database.")
     copy_image_files_parser.add_argument('-n', '--new-image-directory', metavar='DIR', required=True, help="Specify the image directory where the images should be copied to.")
     copy_image_files_parser.add_argument('-s', '--sub-directory', metavar='DIR', help="To speed up the search process you might define a sub-directory that is scanned, e.g., 'Original'.")
     copy_image_files_parser.add_argument('-l', '--soft-link', action='store_true', help="If selected, the images will be linked rather than copied.")
-
     copy_image_files_parser.set_defaults(func=copy_image_files) #action
 
-    # get the "create-eye-files" action from a submodule
+    # the (deprecated) "create-eye-files" action
     create_annotation_files_parser = subparsers.add_parser('create-annotation-files', help=create_annotation_files.__doc__)
-
     create_annotation_files_parser.add_argument('-d', '--directory', required=True, help="The eye position files will be stored in this directory")
-    create_annotation_files_parser.add_argument('-e', '--extension', default = '.pos', help="if given, this extension will be appended to every entry returned (defaults to '%(default)s')")
+    create_annotation_files_parser.add_argument('-e', '--extension', default = '.pos', help="if given, this extension will be appended to every entry returned.")
     create_annotation_files_parser.add_argument('--self-test', dest="selftest", action='store_true', help=argparse.SUPPRESS)
-
     create_annotation_files_parser.set_defaults(func=create_annotation_files) #action
 
 
