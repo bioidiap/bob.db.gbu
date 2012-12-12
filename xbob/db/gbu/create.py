@@ -42,8 +42,8 @@ def collect_files(directory, extension = '.jpg', subdirectory = None):
   return (filelist, dirlist)
 
 
-def add_files_and_protocols(session, list_dir, image_dir = None):
-  """Add files (and clients) to the BANCA database."""
+def add_files_and_protocols(session, list_dir, image_dir, verbose):
+  """Add files, clients and protocols to the GBU database."""
 
   import xml.sax
   class XmlFileReader (xml.sax.handler.ContentHandler):
@@ -147,10 +147,10 @@ def add_files_and_protocols(session, list_dir, image_dir = None):
 
   # now, correct the directories according to the real image directory structure
   if image_dir:
-    print "Collecting images from directory", image_dir
+    if verbose: print "Collecting images from directory", image_dir, "...",
     # collect all the files in the given directory
     file_list, dir_list = collect_files(image_dir)
-    print "Done. Collected", len(file_list), "images."
+    if verbose: print "done. Collected", len(file_list), "images."
     # correct the directories in all file lists
     for l in all_lists:
       correct_dir(l, file_list, dir_list)
@@ -158,16 +158,20 @@ def add_files_and_protocols(session, list_dir, image_dir = None):
   # Now, create file entries in the database and create clients and files
   clients = set()
   files = {}
+  if verbose: print "Adding clients and files ..."
   for list in all_lists:
     for file in list:
       if file.signature not in clients:
+        if verbose>1: print "  Adding client '%s'" % file.signature
         session.add(Client(file.signature))
         clients.add(file.signature)
       if file.presentation not in files:
+        if verbose>1: print "  Adding file '%s'" % file.presentation
         session.add(file)
         files[file.presentation] = file
 
   # training sets
+  if verbose: print "Adding subworlds ..."
   for name,list in train_lists.iteritems():
     # add subworld
     subworld = Subworld(name)
@@ -175,9 +179,11 @@ def add_files_and_protocols(session, list_dir, image_dir = None):
     session.flush()
     session.refresh(subworld)
     for file in list:
+      if verbose>1: print "  Adding file '%s' to subworld '%s'" % (file.presentation, name)
       subworld.files.append(files[file.presentation])
 
   # protocols
+  if verbose: print "Adding protocols ..."
   for protocol in protocols:
     target_protocol = Protocol(protocol, 'enrol')
     session.add(target_protocol)
@@ -185,6 +191,7 @@ def add_files_and_protocols(session, list_dir, image_dir = None):
     session.refresh(target_protocol)
     # enroll files
     for file in target_lists[protocol]:
+      if verbose>1: print "  Adding file '%s' to target protocol '%s'" % (file.presentation, protocol)
       target_protocol.files.append(files[file.presentation])
 
     # probe files
@@ -193,10 +200,12 @@ def add_files_and_protocols(session, list_dir, image_dir = None):
     session.flush()
     session.refresh(query_protocol)
     for file in query_lists[protocol]:
+      if verbose>1: print "  Adding file '%s' to query protocol '%s'" % (file.presentation, protocol)
       query_protocol.files.append(files[file.presentation])
 
   # annotations
   # for speed purposes, create a special dictionary from file name to file id
+  if verbose: print "Adding annotations ..."
   file_id_dict = {}
   for file in files.itervalues():
     file_id_dict[os.path.basename(file.path)] = file.id
@@ -210,6 +219,7 @@ def add_files_and_protocols(session, list_dir, image_dir = None):
     name = os.path.splitext(os.path.basename(entries[0]))[0]
     # test if these eye positions belong to any file of this list
     if name in file_id_dict:
+      if verbose>1: print "  Adding annotation '%s' to query file '%s'" % ([int(e.strip()) for e in entries[1:]], name)
       session.add(Annotation(file_id_dict[name], entries[1:]))
 
 
@@ -220,7 +230,7 @@ def create_tables(args):
 
   from bob.db.utils import create_engine_try_nolock
 
-  engine = create_engine_try_nolock(args.type, args.files[0], echo=(args.verbose >= 2))
+  engine = create_engine_try_nolock(args.type, args.files[0], echo=(args.verbose > 2))
   Base.metadata.create_all(engine)
 
 # Driver API
@@ -241,8 +251,8 @@ def create(args):
 
   # the real work...
   create_tables(args)
-  s = utils.session(args.type, args.files[0], echo=(args.verbose >= 2))
-  add_files_and_protocols(s, args.list_directory, args.rescan_image_directory)
+  s = utils.session(args.type, args.files[0], echo=(args.verbose > 2))
+  add_files_and_protocols(s, args.list_directory, args.rescan_image_directory, args.verbose)
   s.commit()
   s.close()
 
@@ -252,15 +262,10 @@ def add_command(subparsers):
 
   parser = subparsers.add_parser('create', help=create.__doc__)
 
-  parser.add_argument('--recreate', action='store_true',
-      help="If set, I'll first erase the current database")
-  parser.add_argument('--verbose', action='store_true',
-      help="Do SQL operations in a verbose way")
-  parser.add_argument('--list-directory', metavar='DIR',
-      default = "/idiap/group/biometric/databases/gbu",
-      help="Change the relative path to the directory containing the list of the GBU database (defaults to %(default)s)")
-  parser.add_argument('--rescan-image-directory', metavar='DIR',
-#      default='/idiap/resource/database/MBGC-V1',
-      help="If required, select the path to the directory containing the images of the MBGC-V1 database to be re-scanned")
+  parser.add_argument('-R', '--recreate', action='store_true', help='If set, I\'ll first erase the current database')
+  parser.add_argument('-v', '--verbose', action='count', help='Do SQL operations in a verbose way')
+  parser.add_argument('-D', '--list-directory', metavar='DIR', default = '/idiap/group/biometric/databases/gbu', help='Change the relative path to the directory containing the list of the GBU database.')
+  # here at Idiap, we can use the  directory '/idiap/resource/database/MBGC-V1' to re-scan, if required.
+  parser.add_argument('--rescan-image-directory', metavar='DIR', help='If required, select the path to the directory containing the images of the MBGC-V1 database to be re-scanned')
 
   parser.set_defaults(func=create) #action
