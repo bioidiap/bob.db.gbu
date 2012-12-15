@@ -73,13 +73,13 @@ class Database(xbob.db.verification.utils.SQLiteDatabase):
     retval = []
     # List of the clients
     if 'world' in groups:
-      query = self.query(Client).join(File).join(Subworld, File.subworlds)
+      query = self.query(Client).join(File).join((Subworld, File.subworlds))
       if subworld:
         query = query.filter(Subworld.name.in_(subworld))
       retval.extend([client for client in query])
 
     if 'dev' in groups:
-      query = self.query(Client).join(File).join(Protocol, File.protocols).filter(Protocol.purpose == 'enrol')
+      query = self.query(Client).join(File).join((Protocol, File.protocols)).filter(Protocol.purpose == 'enrol')
       if protocol:
         query = query.filter(Protocol.name.in_(protocol))
       retval.extend([client for client in query])
@@ -144,13 +144,13 @@ class Database(xbob.db.verification.utils.SQLiteDatabase):
     retval = []
     # query the files and extract their ids
     if 'world' in groups:
-      query = self.query(File).join(Subworld, File.subworlds)
+      query = self.query(File).join((Subworld, File.subworlds))
       if subworld:
         query = query.filter(Subworld.name.in_(subworld))
       retval.extend([file for file in query])
 
     if 'dev' in groups:
-      query = self.query(File).join(Protocol, File.protocols).filter(Protocol.purpose == 'enrol')
+      query = self.query(File).join((Protocol, File.protocols)).filter(Protocol.purpose == 'enrol')
       if protocol:
         query = query.filter(Protocol.name.in_(protocol))
       retval.extend([file for file in query])
@@ -196,13 +196,13 @@ class Database(xbob.db.verification.utils.SQLiteDatabase):
     retval = []
     # for world group, we always have CLIENT IDS
     if 'world' in groups:
-      query = self.query(Client).join(File).join(Subworld, File.subworlds)
+      query = self.query(Client).join(File).join((Subworld, File.subworlds))
       if subworld:
         query = query.filter(Subworld.name.in_(subworld))
       retval.extend([client.id for client in query])
 
     if 'dev' in groups:
-      query = self.query(File).join(Protocol, File.protocols).filter(Protocol.purpose == 'enrol')
+      query = self.query(File).join((Protocol, File.protocols)).filter(Protocol.purpose == 'enrol')
       if protocol:
         query = query.filter(Protocol.name.in_(protocol))
       retval.extend([file.id for file in query])
@@ -317,7 +317,7 @@ class Database(xbob.db.verification.utils.SQLiteDatabase):
     retval = []
 
     if 'world' in groups:
-      query = self.query(File).join(Subworld, File.subworlds)
+      query = self.query(File).join((Subworld, File.subworlds))
       if subworld:
         query = query.filter(Subworld.name.in_(subworld))
       # here, we always filter by client ids (which is done by taking the 'multi' protocol)
@@ -326,7 +326,7 @@ class Database(xbob.db.verification.utils.SQLiteDatabase):
 
     if 'dev' in groups:
       if 'enrol' in purposes:
-        query = self.query(File).join(Protocol, File.protocols).filter(Protocol.purpose == 'enrol')
+        query = self.query(File).join((Protocol, File.protocols)).filter(Protocol.purpose == 'enrol')
         if protocol:
           query = query.filter(Protocol.name.in_(protocol))
         # filter model ids only when only the enrol objects are requested
@@ -335,7 +335,7 @@ class Database(xbob.db.verification.utils.SQLiteDatabase):
         retval.extend([file for file in query])
 
       if 'probe' in purposes:
-        query = self.query(File).join(Protocol, File.protocols).filter(Protocol.purpose == 'probe')
+        query = self.query(File).join((Protocol, File.protocols)).filter(Protocol.purpose == 'probe')
         if protocol:
           query = query.filter(Protocol.name.in_(protocol))
         retval.extend([file for file in query])
