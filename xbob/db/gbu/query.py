@@ -40,7 +40,7 @@ class Database(xbob.db.verification.utils.SQLiteDatabase):
 
   def __init__(self):
     # call base class constructor
-    xbob.db.verification.utils.SQLiteDatabase.__init__(self, SQLITE_FILE)
+    xbob.db.verification.utils.SQLiteDatabase.__init__(self, SQLITE_FILE, File)
 
     # define some values that we will support
     self.m_groups  = ('world', 'dev') # GBU does not provide an eval set

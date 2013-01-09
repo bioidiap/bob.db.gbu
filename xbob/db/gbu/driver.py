@@ -171,6 +171,44 @@ def create_annotation_files(args):
   return 0
 
 
+def reverse(args):
+  """Returns a list of file database identifiers given the path stems"""
+
+  from .query import Database
+  db = Database()
+
+  output = sys.stdout
+  if args.selftest:
+    from bob.db.utils import null
+    output = null()
+
+  r = db.reverse(args.path)
+  for f in r: output.write('%s\n' % f.id)
+
+  if not r: return 1
+
+  return 0
+
+
+def path(args):
+  """Returns a list of fully formed paths or stems given some file id"""
+
+  from .query import Database
+  db = Database()
+
+  output = sys.stdout
+  if args.selftest:
+    from bob.db.utils import null
+    output = null()
+
+  r = db.paths(args.id, prefix=args.directory, suffix=args.extension)
+  for path in r: output.write('%s\n' % path)
+
+  if not r: return 1
+
+  return 0
+
+
 
 class Interface(BaseInterface):
 
@@ -202,38 +240,50 @@ class Interface(BaseInterface):
     from .models import Protocol, Subworld
 
     # the "dumplist" action
-    dump_list_parser = subparsers.add_parser('dumplist', help=dumplist.__doc__)
-    dump_list_parser.add_argument('-d', '--directory', help="if given, this path will be prepended to every entry returned.")
-    dump_list_parser.add_argument('-e', '--extension', help="if given, this extension will be appended to every entry returned.")
-    dump_list_parser.add_argument('-g', '--group', help="if given, this value will limit the output files to those belonging to a particular group.", choices=('world', 'dev'))
-    dump_list_parser.add_argument('-s', '--subworld', help="if given, limits the dump to a particular subworld of the data.", choices=Subworld.subworld_choices)
-    dump_list_parser.add_argument('-p', '--protocol', help="if given, limits the dump to a particular subset of the data that corresponds to the given protocol.", choices=Protocol.protocol_choices)
-    dump_list_parser.add_argument('-u', '--purpose', help="if given, this value will limit the output files to those designed for the given purposes.", choices=Protocol.purpose_choices)
-    dump_list_parser.add_argument('--self-test', dest="selftest", action='store_true', help=argparse.SUPPRESS)
-    dump_list_parser.set_defaults(func=dumplist) #action
+    parser = subparsers.add_parser('dumplist', help=dumplist.__doc__)
+    parser.add_argument('-d', '--directory', help="if given, this path will be prepended to every entry returned.")
+    parser.add_argument('-e', '--extension', help="if given, this extension will be appended to every entry returned.")
+    parser.add_argument('-g', '--group', help="if given, this value will limit the output files to those belonging to a particular group.", choices=('world', 'dev'))
+    parser.add_argument('-s', '--subworld', help="if given, limits the dump to a particular subworld of the data.", choices=Subworld.subworld_choices)
+    parser.add_argument('-p', '--protocol', help="if given, limits the dump to a particular subset of the data that corresponds to the given protocol.", choices=Protocol.protocol_choices)
+    parser.add_argument('-u', '--purpose', help="if given, this value will limit the output files to those designed for the given purposes.", choices=Protocol.purpose_choices)
+    parser.add_argument('--self-test', dest="selftest", action='store_true', help=argparse.SUPPRESS)
+    parser.set_defaults(func=dumplist) #action
 
     # the "checkfiles" action
-    check_files_parser = subparsers.add_parser('checkfiles', help=checkfiles.__doc__)
-    check_files_parser.add_argument('-d', '--directory', help="if given, this path will be prepended to every entry returned.")
-    check_files_parser.add_argument('-e', '--extension', help="if given, this extension will be appended to every entry returned.")
-    check_files_parser.add_argument('--self-test', dest="selftest", action='store_true', help=argparse.SUPPRESS)
-
-    check_files_parser.set_defaults(func=checkfiles) #action
+    parser = subparsers.add_parser('checkfiles', help=checkfiles.__doc__)
+    parser.add_argument('-d', '--directory', help="if given, this path will be prepended to every entry returned.")
+    parser.add_argument('-e', '--extension', help="if given, this extension will be appended to every entry returned.")
+    parser.add_argument('--self-test', dest="selftest", action='store_true', help=argparse.SUPPRESS)
+    parser.set_defaults(func=checkfiles) #action
 
     # the "copy-image-files" action
-    copy_image_files_parser = subparsers.add_parser('copy-image-files', help=copy_image_files.__doc__)
-    copy_image_files_parser.add_argument('-d', '--original-image-directory', metavar='DIR', required=True, help="Specify the image directory containing the MBGC-V1 images.")
-    copy_image_files_parser.add_argument('-e', '--original-image-extension', metavar='EXT', default = '.jpg', help="The extension of the images in the database.")
-    copy_image_files_parser.add_argument('-n', '--new-image-directory', metavar='DIR', required=True, help="Specify the image directory where the images should be copied to.")
-    copy_image_files_parser.add_argument('-s', '--sub-directory', metavar='DIR', help="To speed up the search process you might define a sub-directory that is scanned, e.g., 'Original'.")
-    copy_image_files_parser.add_argument('-l', '--soft-link', action='store_true', help="If selected, the images will be linked rather than copied.")
-    copy_image_files_parser.set_defaults(func=copy_image_files) #action
+    parser = subparsers.add_parser('copy-image-files', help=copy_image_files.__doc__)
+    parser.add_argument('-d', '--original-image-directory', metavar='DIR', required=True, help="Specify the image directory containing the MBGC-V1 images.")
+    parser.add_argument('-e', '--original-image-extension', metavar='EXT', default = '.jpg', help="The extension of the images in the database.")
+    parser.add_argument('-n', '--new-image-directory', metavar='DIR', required=True, help="Specify the image directory where the images should be copied to.")
+    parser.add_argument('-s', '--sub-directory', metavar='DIR', help="To speed up the search process you might define a sub-directory that is scanned, e.g., 'Original'.")
+    parser.add_argument('-l', '--soft-link', action='store_true', help="If selected, the images will be linked rather than copied.")
+    parser.set_defaults(func=copy_image_files) #action
 
     # the (deprecated) "create-eye-files" action
-    create_annotation_files_parser = subparsers.add_parser('create-annotation-files', help=create_annotation_files.__doc__)
-    create_annotation_files_parser.add_argument('-d', '--directory', required=True, help="The eye position files will be stored in this directory")
-    create_annotation_files_parser.add_argument('-e', '--extension', default = '.pos', help="if given, this extension will be appended to every entry returned.")
-    create_annotation_files_parser.add_argument('--self-test', dest="selftest", action='store_true', help=argparse.SUPPRESS)
-    create_annotation_files_parser.set_defaults(func=create_annotation_files) #action
+    parser = subparsers.add_parser('create-annotation-files', help=create_annotation_files.__doc__)
+    parser.add_argument('-d', '--directory', required=True, help="The eye position files will be stored in this directory")
+    parser.add_argument('-e', '--extension', default = '.pos', help="if given, this extension will be appended to every entry returned.")
+    parser.add_argument('--self-test', dest="selftest", action='store_true', help=argparse.SUPPRESS)
+    parser.set_defaults(func=create_annotation_files) #action
 
+    # adds the "reverse" command
+    parser = subparsers.add_parser('reverse', help=reverse.__doc__)
+    parser.add_argument('path', nargs='+', help="one or more path stems to look up. If you provide more than one, files which cannot be reversed will be omitted from the output.")
+    parser.add_argument('--self-test', dest="selftest", action='store_true', help=argparse.SUPPRESS)
+    parser.set_defaults(func=reverse) #action
+
+    # adds the "path" command
+    parser = subparsers.add_parser('path', help=path.__doc__)
+    parser.add_argument('-d', '--directory', help="if given, this path will be prepended to every entry returned.")
+    parser.add_argument('-e', '--extension', help="if given, this extension will be appended to every entry returned.")
+    parser.add_argument('id', type=int, nargs='+', help="one or more file ids to look up. If you provide more than one, files which cannot be found will be omitted from the output. If you provide a single id to lookup, an error message will be printed if the id does not exist in the database. The exit status will be non-zero in such case.")
+    parser.add_argument('--self-test', dest="selftest", action='store_true', help=argparse.SUPPRESS)
+    parser.set_defaults(func=path) #action
 

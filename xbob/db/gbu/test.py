@@ -148,4 +148,6 @@ class GBUDatabaseTest(unittest.TestCase):
     self.assertEqual( main('gbu checkfiles --self-test'.split()), 0 )
     # This function is deprecated, so we don't test it any more.
     #self.assertEqual( main(['gbu', 'create-annotation-files', '-d', '.', '--self-test']), 0 )
+    self.assertEqual(main('gbu reverse Target/Original/04542d172 --self-test'.split()), 0)
+    self.assertEqual(main('gbu path 513 --self-test'.split()), 0)
 
