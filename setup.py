@@ -10,7 +10,7 @@ from setuptools import setup, find_packages
 setup(
 
     name='xbob.db.gbu',
-    version='1.0.1',
+    version='1.0.2',
     description='Database Access API of the Good, the Bad and the Ugly (GBU) image database for Bob',
     url='http://github.com/bioidiap/xbob.db.gbu',
     license='GPLv3',
