@@ -45,7 +45,7 @@ class Client(Base):
     self.id = client_id_from_signature(signature)
 
   def __repr__(self):
-    return "<Client(%d = '%s')>" % (self.id, self.signature)
+    return "<Client(%d)>" % (self.id)
 
 
 class Annotation(Base):
