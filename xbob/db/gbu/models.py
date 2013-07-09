@@ -70,11 +70,9 @@ class Annotation(Base):
     self.le_x = int(eyes[2])
     self.le_y = int(eyes[3])
 
-
   def __call__(self):
     """Returns the annotations of this database in a dictionary: {'reye' : (re_y, re_x), 'leye' : (le_y, le_x)}."""
     return {'reye' : (self.re_y, self.re_x), 'leye' : (self.le_y, self.le_x) }
-
 
   def __repr__(self):
     return "<Annotation('%s': 'reye'=%dx%d, 'leye'=%dx%d)>" % (self.file_id, self.re_y, self.re_x, self.le_y, self.le_x)
