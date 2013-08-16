@@ -20,6 +20,8 @@
 """This script creates the GBU database in a single pass.
 """
 
+from __future__ import print_function
+
 import os
 
 from .models import *
