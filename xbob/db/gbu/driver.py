@@ -133,7 +133,7 @@ def create_annotation_files(args):
   This function is deprecated, please do not use it anymore.
   """
 
-  print("Warning: this function is deprecated. Please use the Database.annotations() function to get the annotations.", file=sys.stderr)
+  sys.stderr.write("Warning: this function is deprecated. Please use the Database.annotations() function to get the annotations.\n")
 
   # report
   output = sys.stdout
