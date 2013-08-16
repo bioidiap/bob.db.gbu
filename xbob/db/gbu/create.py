@@ -117,7 +117,7 @@ def add_files_and_protocols(session, list_dir, image_dir, verbose):
     for i in image_list:
       if os.path.basename(i.path) + extension not in filenames_set:
         missing_files.append(i)
-        print "The image '" + i.m_filename + extension + "' was not found in the given directory"
+        print("The image '" + i.m_filename + extension + "' was not found in the given directory")
 
     return missing_files
 
@@ -143,14 +143,14 @@ def add_files_and_protocols(session, list_dir, image_dir, verbose):
     target_lists[p] = read_list(os.path.join(list_dir, 'GBU_%s_Target.xml'%p))
     # Query files
     query_lists[p] = read_list(os.path.join(list_dir, 'GBU_%s_Query.xml'%p))
-  all_lists = [f for f in train_lists.itervalues()] + [f for f in target_lists.itervalues()] + [f for f in query_lists.itervalues()]
+  all_lists = [f for f in train_lists.values()] + [f for f in target_lists.values()] + [f for f in query_lists.values()]
 
   # now, correct the directories according to the real image directory structure
   if image_dir:
-    if verbose: print "Collecting images from directory", image_dir, "...",
+    if verbose: print("Collecting images from directory", image_dir, "...", end=' ')
     # collect all the files in the given directory
     file_list, dir_list = collect_files(image_dir)
-    if verbose: print "done. Collected", len(file_list), "images."
+    if verbose: print("done. Collected", len(file_list), "images.")
     # correct the directories in all file lists
     for l in all_lists:
       correct_dir(l, file_list, dir_list)
@@ -158,32 +158,32 @@ def add_files_and_protocols(session, list_dir, image_dir, verbose):
   # Now, create file entries in the database and create clients and files
   clients = set()
   files = {}
-  if verbose: print "Adding clients and files ..."
+  if verbose: print("Adding clients and files ...")
   for list in all_lists:
     for file in list:
       if file.signature not in clients:
-        if verbose>1: print "  Adding client '%s'" % file.signature
+        if verbose>1: print("  Adding client '%s'" % file.signature)
         session.add(Client(file.signature))
         clients.add(file.signature)
       if file.presentation not in files:
-        if verbose>1: print "  Adding file '%s'" % file.presentation
+        if verbose>1: print("  Adding file '%s'" % file.presentation)
         session.add(file)
         files[file.presentation] = file
 
   # training sets
-  if verbose: print "Adding subworlds ..."
-  for name,list in train_lists.iteritems():
+  if verbose: print("Adding subworlds ...")
+  for name,list in train_lists.items():
     # add subworld
     subworld = Subworld(name)
     session.add(subworld)
     session.flush()
     session.refresh(subworld)
     for file in list:
-      if verbose>1: print "  Adding file '%s' to subworld '%s'" % (file.presentation, name)
+      if verbose>1: print("  Adding file '%s' to subworld '%s'" % (file.presentation, name))
       subworld.files.append(files[file.presentation])
 
   # protocols
-  if verbose: print "Adding protocols ..."
+  if verbose: print("Adding protocols ...")
   for protocol in protocols:
     target_protocol = Protocol(protocol, 'enrol')
     session.add(target_protocol)
@@ -191,7 +191,7 @@ def add_files_and_protocols(session, list_dir, image_dir, verbose):
     session.refresh(target_protocol)
     # enroll files
     for file in target_lists[protocol]:
-      if verbose>1: print "  Adding file '%s' to target protocol '%s'" % (file.presentation, protocol)
+      if verbose>1: print("  Adding file '%s' to target protocol '%s'" % (file.presentation, protocol))
       target_protocol.files.append(files[file.presentation])
 
     # probe files
@@ -200,14 +200,14 @@ def add_files_and_protocols(session, list_dir, image_dir, verbose):
     session.flush()
     session.refresh(query_protocol)
     for file in query_lists[protocol]:
-      if verbose>1: print "  Adding file '%s' to query protocol '%s'" % (file.presentation, protocol)
+      if verbose>1: print("  Adding file '%s' to query protocol '%s'" % (file.presentation, protocol))
       query_protocol.files.append(files[file.presentation])
 
   # annotations
   # for speed purposes, create a special dictionary from file name to file id
-  if verbose: print "Adding annotations ..."
+  if verbose: print("Adding annotations ...")
   file_id_dict = {}
-  for file in files.itervalues():
+  for file in files.values():
     file_id_dict[os.path.basename(file.path)] = file.id
   # read the eye position list
   eyes_file = os.path.join(list_dir, 'alleyes.csv')
@@ -219,7 +219,7 @@ def add_files_and_protocols(session, list_dir, image_dir, verbose):
     name = os.path.splitext(os.path.basename(entries[0]))[0]
     # test if these eye positions belong to any file of this list
     if name in file_id_dict:
-      if verbose>1: print "  Adding annotation '%s' to query file '%s'" % ([int(e.strip()) for e in entries[1:]], name)
+      if verbose>1: print("  Adding annotation '%s' to query file '%s'" % ([int(e.strip()) for e in entries[1:]], name))
       session.add(Annotation(file_id_dict[name], entries[1:]))
 
 

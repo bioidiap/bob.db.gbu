@@ -87,14 +87,14 @@ def copy_image_files(args):
   required sub-directory structure, by copying or linking the images"""
 
   if os.path.exists(args.new_image_directory):
-    print "Directory", args.new_image_directory, "already exists, please choose another one."
+    print("Directory", args.new_image_directory, "already exists, please choose another one.")
     return
   # collect the files in the given directory
   from .create import collect_files
-  print "Collecting image files from directory", args.original_image_directory
+  print("Collecting image files from directory", args.original_image_directory)
   filelist, dirlist = collect_files(args.original_image_directory, args.original_image_extension, args.sub_directory)
 
-  print "Done. Found", len(filelist), "image files."
+  print("Done. Found", len(filelist), "image files.")
   # get the files of the database
   from .query import Database
   db = Database()
@@ -106,7 +106,7 @@ def copy_image_files(args):
     temp_dict[os.path.basename(file.path)[0]] = file
 
   command = os.symlink if args.soft_link else shutil.copy
-  print "Copying (or linking) files to directory", args.new_image_directory
+  print("Copying (or linking) files to directory", args.new_image_directory)
   # now, iterate through the detected files
   for index in range(len(filelist)):
     file_wo_extension = os.path.splitext(filelist[index])[0]
@@ -133,7 +133,7 @@ def create_annotation_files(args):
   This function is deprecated, please do not use it anymore.
   """
 
-  print >> sys.stderr, "Warning: this function is deprecated. Please use the Database.annotations() function to get the annotations."
+  print("Warning: this function is deprecated. Please use the Database.annotations() function to get the annotations.", file=sys.stderr)
 
   # report
   output = sys.stdout
