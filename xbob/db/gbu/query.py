@@ -27,6 +27,7 @@ from .driver import Interface
 SQLITE_FILE = Interface().files()[0]
 
 import os
+import six
 import bob
 
 import xbob.db.verification.utils
@@ -309,7 +310,7 @@ class Database(xbob.db.verification.utils.SQLiteDatabase):
     purposes = self.check_parameters_for_validity(purposes, "purpose", self.m_purposes)
     protocol_type = self.check_parameter_for_validity(protocol_type, 'protocol type', self.m_protocol_types)
 
-    if isinstance(model_ids, str):
+    if isinstance(model_ids, six.string_types):
       model_ids = (model_ids,)
     # check that the model ids are in the actual set of model ids (for the type of protocol that we are currently using)
     model_ids = self.check_parameters_for_validity(model_ids, 'model id', self.model_ids(groups=groups, subworld=subworld, protocol=protocol, protocol_type=protocol_type),[])
