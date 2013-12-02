@@ -39,6 +39,8 @@ class GBUDatabaseTest(unittest.TestCase):
     subworlds = db.m_sub_worlds
     protocols = db.m_protocols
 
+    self.assertEqual(len(db.groups()), 2)
+
     # client counter
     self.assertEqual(len(db.client_ids()), 782)
     self.assertEqual(len(db.clients(groups='world')), 345)
