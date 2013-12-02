@@ -50,6 +50,17 @@ class Database(xbob.db.verification.utils.SQLiteDatabase):
     self.m_protocols = Protocol.protocol_choices
     self.m_protocol_types = ('gbu', 'multi') # The type of protocols: The default GBU or one with multiple files per model
 
+  def groups(self, protocol=None):
+    """Returns a list of groups for the given protocol
+
+    Keyword Parameters:
+
+    protocol
+      One or several of the GBU protocols ('Good', 'Bad', 'Ugly'), only valid if group is 'dev'.
+
+    Returns: a list of groups
+    """
+    return self.m_groups
 
   def clients(self, groups=None, subworld=None, protocol=None):
     """Returns a list of clients for the specific query by the user.
