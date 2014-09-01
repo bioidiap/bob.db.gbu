@@ -25,8 +25,8 @@ import sys
 import tempfile, shutil
 import argparse
 
-from bob.db import utils
-from bob.db.driver import Interface as BaseInterface
+from bob.db.base import utils
+from bob.db.base.driver import Interface as BaseInterface
 
 def dumplist(args):
   """Dumps lists of files based on your criteria"""
@@ -125,52 +125,6 @@ def copy_image_files(args):
   return 0
 
 
-def create_annotation_files(args):
-  """Creates the eye position files for the GBU database
-  (using the eye positions stored in the database),
-  so that GBU shares the same structure as other databases.
-
-  This function is deprecated, please do not use it anymore.
-  """
-
-  sys.stderr.write("Warning: this function is deprecated. Please use the Database.annotations() function to get the annotations.\n")
-
-  # report
-  output = sys.stdout
-  if args.selftest:
-    output = utils.null()
-    args.directory = tempfile.mkdtemp(prefix='xbob_db_gbu_')
-
-  from .query import Database
-  db = Database()
-
-  # retrieve all files
-  files = db.objects()
-  for file in files:
-    filename = file.make_path(directory=args.directory, extension=args.extension)
-    if not os.path.exists(os.path.dirname(filename)):
-      os.makedirs(os.path.dirname(filename))
-    eyes = db.annotations(file.id)
-    f = open(filename, 'w')
-    # write eyes in with annotations: right eye, left eye
-    f.writelines('reye' + ' ' + str(eyes['reye'][1]) + ' ' + str(eyes['reye'][0]) + '\n')
-    f.writelines('leye' + ' ' + str(eyes['leye'][1]) + ' ' + str(eyes['leye'][0]) + '\n')
-    f.close()
-
-
-  if args.selftest:
-    # check that all files really exist
-    args.selftest = False
-    args.groups = None
-    args.subworld = None
-    args.protocol = None
-    args.purposes = None
-    checkfiles(args)
-    shutil.rmtree(args.directory)
-
-  return 0
-
-
 def reverse(args):
   """Returns a list of file database identifiers given the path stems"""
 
@@ -179,7 +133,7 @@ def reverse(args):
 
   output = sys.stdout
   if args.selftest:
-    from bob.db.utils import null
+    from bob.db.base.utils import null
     output = null()
 
   r = db.reverse(args.path)
@@ -198,7 +152,7 @@ def path(args):
 
   output = sys.stdout
   if args.selftest:
-    from bob.db.utils import null
+    from bob.db.base.utils import null
     output = null()
 
   r = db.paths(args.id, prefix=args.directory, suffix=args.extension)
@@ -217,7 +171,7 @@ class Interface(BaseInterface):
 
   def version(self):
     import pkg_resources  # part of setuptools
-    return pkg_resources.require('xbob.db.%s' % self.name())[0].version
+    return pkg_resources.require('bob.db.%s' % self.name())[0].version
 
   def files(self):
     from pkg_resources import resource_filename
@@ -265,13 +219,6 @@ class Interface(BaseInterface):
     parser.add_argument('-s', '--sub-directory', metavar='DIR', help="To speed up the search process you might define a sub-directory that is scanned, e.g., 'Original'.")
     parser.add_argument('-l', '--soft-link', action='store_true', help="If selected, the images will be linked rather than copied.")
     parser.set_defaults(func=copy_image_files) #action
-
-    # the (deprecated) "create-eye-files" action
-    parser = subparsers.add_parser('create-annotation-files', help=create_annotation_files.__doc__)
-    parser.add_argument('-d', '--directory', required=True, help="The eye position files will be stored in this directory")
-    parser.add_argument('-e', '--extension', default = '.pos', help="if given, this extension will be appended to every entry returned.")
-    parser.add_argument('--self-test', dest="selftest", action='store_true', help=argparse.SUPPRESS)
-    parser.set_defaults(func=create_annotation_files) #action
 
     # adds the "reverse" command
     parser = subparsers.add_parser('reverse', help=reverse.__doc__)

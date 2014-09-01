@@ -28,11 +28,10 @@ SQLITE_FILE = Interface().files()[0]
 
 import os
 import six
-import bob
 
-import xbob.db.verification.utils
+import bob.db.verification.utils
 
-class Database(xbob.db.verification.utils.SQLiteDatabase):
+class Database(bob.db.verification.utils.SQLiteDatabase):
   """The dataset class opens and maintains a connection opened to the Database.
 
   It provides many different ways to probe for the characteristics of the data
@@ -41,7 +40,7 @@ class Database(xbob.db.verification.utils.SQLiteDatabase):
 
   def __init__(self, original_directory = None, original_extension = '.jpg'):
     # call base class constructor
-    xbob.db.verification.utils.SQLiteDatabase.__init__(self, SQLITE_FILE, File, original_directory=original_directory, original_extension=original_extension)
+    bob.db.verification.utils.SQLiteDatabase.__init__(self, SQLITE_FILE, File, original_directory=original_directory, original_extension=original_extension)
 
     # define some values that we will support
     self.m_groups  = ('world', 'dev') # GBU does not provide an eval set
@@ -222,7 +221,7 @@ class Database(xbob.db.verification.utils.SQLiteDatabase):
     return retval
 
 
-  def get_client_id_from_file_id(self, file_id):
+  def get_client_id_from_file_id(self, file_id, **kwargs):
     """Returns the client id (real client id) attached to the given file id
 
     Keyword Parameters:
@@ -240,7 +239,7 @@ class Database(xbob.db.verification.utils.SQLiteDatabase):
     return query.first().client_id
 
 
-  def get_client_id_from_model_id(self, model_id, group='dev', protocol_type='gbu'):
+  def get_client_id_from_model_id(self, model_id, group='dev', protocol_type='gbu', **kwargs):
     """Returns the client id attached to the given model id.
     Dependent on the protocol type and the group, it is expected that
 

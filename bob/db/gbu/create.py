@@ -25,7 +25,7 @@ from __future__ import print_function
 import os
 
 from .models import *
-from bob.db import utils
+from bob.db.base import utils
 
 
 def collect_files(directory, extension = '.jpg', subdirectory = None):
@@ -230,7 +230,7 @@ def add_files_and_protocols(session, list_dir, image_dir, verbose):
 def create_tables(args):
   """Creates all necessary tables (only to be used at the first time)"""
 
-  from bob.db.utils import create_engine_try_nolock
+  from bob.db.base.utils import create_engine_try_nolock
 
   engine = create_engine_try_nolock(args.type, args.files[0], echo=(args.verbose > 2))
   Base.metadata.create_all(engine)

@@ -9,10 +9,10 @@ from setuptools import setup, find_packages
 # parameters that define our package.
 setup(
 
-    name='xbob.db.gbu',
-    version='1.2.2a0',
+    name='bob.db.gbu',
+    version='2.0.0a0',
     description='Database Access API of the Good, the Bad and the Ugly (GBU) image database for Bob',
-    url='http://github.com/bioidiap/xbob.db.gbu',
+    url='http://github.com/bioidiap/bob.db.gbu',
     license='GPLv3',
     author='Manuel Guenther',
     author_email='manuel.guenther@idiap.ch',
@@ -26,26 +26,22 @@ setup(
     install_requires=[
       'setuptools',
       'six',  # py2/3 compatibility library
-      'bob',  # base signal proc./machine learning library
-      'xbob.db.verification.utils>=1.0.0' # defines a set of utilities for face verification databases like this one.
+      'bob.db.base',
+      'bob.db.verification.utils' # defines a set of utilities for face verification databases like this one.
     ],
 
     namespace_packages = [
-      'xbob',
-      'xbob.db',
-      ],
+      'bob',
+      'bob.db',
+    ],
 
     entry_points = {
       # bob database declaration
       'bob.db': [
-        'gbu = xbob.db.gbu.driver:Interface',
-        ],
+        'gbu = bob.db.gbu.driver:Interface',
+      ],
 
-      # bob unittest declaration
-      'bob.test': [
-        'gbu = xbob.db.gbu.test:GBUDatabaseTest',
-        ],
-      },
+    },
 
     classifiers = [
       'Development Status :: 4 - Beta',
@@ -56,5 +52,5 @@ setup(
       'Programming Language :: Python :: 3',
       'Topic :: Scientific/Engineering :: Artificial Intelligence',
       'Topic :: Database :: Front-Ends',
-      ],
+    ],
 )

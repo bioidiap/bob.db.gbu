@@ -31,7 +31,7 @@ and download:
 Unfortunately, the directory structure in this image database changed. If you have an older version of it,
 and the ``bob_dbmanage.py gbu checkfiles --directory <YOUR_PATH_TO_MBGC-V1>`` fails (i.e. reports missing files), you have two possible options:
 
-* Download the GBU-sigsets.zip file from https://github.com/bioidiap/xbob.db.gbu/downloads, extract the zip file to a directory of your choice and call
+* Download the GBU-sigsets.zip file from https://github.com/bioidiap/bob.db.gbu/downloads, extract the zip file to a directory of your choice and call
   ``bob_dbmanage.py gbu create --recreate --list-directory <YOUR_PATH_TO_THE_XML_LISTS> --rescan-image-directory <YOUR_PATH_TO_MBGC-V1>``
   (you might need root access to recreate the database)
 
@@ -43,11 +43,11 @@ or ``bob_dbmanage.py gbu checkfiles --directory <NEW_IMAGE_PATH_TO_BE_CREATED>``
 If this fails again, your copy of the MBGC-V1 database is corrupted, and you might consider to get a new copy of it.
 
 .. note::
-  The lists from https://github.com/bioidiap/xbob.db.gbu/downloads contains the file lists as provided by the CSU Face Recognition Resources, see http://www.cs.colostate.edu/facerec/algorithms/baselines2011.php.
+  The lists from https://github.com/bioidiap/bob.db.gbu/downloads contains the file lists as provided by the CSU Face Recognition Resources, see http://www.cs.colostate.edu/facerec/algorithms/baselines2011.php.
   In these files, the directory structure is adapted to our (the latest?) version of the MBGC-V1 database.
 
 
-Creating the annotation files compatible with other xbob databases
+Creating the annotation files compatible with other bob databases
 ------------------------------------------------------------------
 The hand-labeled annotations of the eyes are stored in the database itself (after reading them from the file lists, see above).
 Other databases provide the annotations in files, one file per image.
@@ -94,5 +94,21 @@ When a single number is required, usually the FRR (or the CAR) at FAR=0.1% is re
 
 from .query import Database
 
-__all__ = ['Database']
+def get_config():
+  """Returns a string containing the configuration information.
+  """
 
+  import pkg_resources
+
+  packages = pkg_resources.require(__name__)
+  this = packages[0]
+  deps = packages[1:]
+
+  retval =  "%s: %s (%s)\n" % (this.key, this.version, this.location)
+  retval += "  - python dependencies:\n"
+  for d in deps: retval += "    - %s: %s (%s)\n" % (d.key, d.version, d.location)
+
+  return retval.strip()
+
+# gets sphinx autodoc done right - don't remove it
+__all__ = [_ for _ in dir() if not _.startswith('_')]

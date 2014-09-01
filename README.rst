@@ -22,7 +22,7 @@ There are a few ways to achieve this:
 The package is available in two different distribution formats:
 
 a) You can download it from `PyPI <http://pypi.python.org/pypi>`_, or
-b) You can download it in its source form from `its git repository <https://github.com/bioidiap/xbob.db.gbu>`_.
+b) You can download it in its source form from `its git repository <https://github.com/bioidiap/bob.db.gbu>`_.
    When you download the version at the git repository, you will need to run a command to recreate the backend SQLite file required for its operation.
    This means that the database raw files must be installed somewhere in this case.
    With option ``1`` you can run in `dummy` mode and only download the raw data files for the database once you are happy with your setup.
@@ -38,11 +38,11 @@ Edit your ``setup.py`` in your satellite package and add the following entry in 
 
     install_requires=[
       ...
-      "xbob.db.gbu",
+      "bob.db.gbu",
     ],
 
 Proceed normally with your ``boostrap/buildout`` steps and you should be all set.
-That means you can now import the ``xbob.db.gbu`` namespace into your scripts.
+That means you can now import the ``bob.db.gbu`` namespace into your scripts.
 
 Modify your buildout.cfg and download from git
 ==============================================
@@ -56,10 +56,10 @@ Your ``buildout.cfg`` file should contain the following lines::
   auto-checkout = *
   eggs = bob
          ...
-         xbob.db.gbu
+         bob.db.gbu
 
   [sources]
-  xbob.db.gbu = git https://github.com/bioidiap/xbob.db.gbu.git
+  bob.db.gbu = git https://github.com/bioidiap/bob.db.gbu.git
   ...
 
 
@@ -77,7 +77,7 @@ If you have an older version of it, and the test::
 
 fails (i.e. reports missing files), you have two possible options:
 
-i) Download the GBU-sigsets.zip file from https://github.com/bioidiap/xbob.db.gbu/downloads, extract the zip to a directory of your choice and call::
+i) Download the GBU-sigsets.zip file from https://github.com/bioidiap/bob.db.gbu/downloads, extract the zip to a directory of your choice and call::
 
     $ bob_dbmanage.py gbu create --recreate --list-directory <YOUR_PATH_TO_THE_XML_LISTS> --rescan-image-directory <YOUR_PATH_TO_MBGC-V1>
 
@@ -98,7 +98,7 @@ or::
 afterwards. If this fails again, your copy of the MBGC-V1 database is corrupted, and you might consider to get a new copy of it.
 
 .. note::
-  The lists from https://github.com/bioidiap/xbob.db.gbu/downloads contains the file lists as provided by the CSU Face Recognition Resources, see http://www.cs.colostate.edu/facerec/algorithms/baselines2011.php.
+  The lists from https://github.com/bioidiap/bob.db.gbu/downloads contains the file lists as provided by the CSU Face Recognition Resources, see http://www.cs.colostate.edu/facerec/algorithms/baselines2011.php.
   In these files, the directory structure is adapted to our (the latest?) version of the MBGC-V1 database.
 
 
