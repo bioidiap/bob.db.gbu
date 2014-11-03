@@ -354,14 +354,10 @@ class Database(bob.db.verification.utils.SQLiteDatabase):
     return retval
 
 
-  def annotations(self, file_id):
-    """Returns the annotations for the given file id as a dictionary {'reye':(y,x), 'leye':(y,x)}."""
+  def annotations(self, file):
+    """Returns the annotations for the given ``File`` object as a dictionary {'reye':(y,x), 'leye':(y,x)}."""
     self.assert_validity()
 
-    query = self.query(Annotation).join(File).filter(File.id==file_id)
-    assert query.count() == 1
-    annotation = query.first()
-
     # return the annotations as returned by the call function of the Annotation object
-    return annotation()
+    return file.annotation()
 
