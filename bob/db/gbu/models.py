@@ -137,11 +137,11 @@ class Protocol(Base):
   __tablename__ = 'protocol'
 
   protocol_choices = ('Good', 'Bad', 'Ugly')
-  purpose_choices = ('enrol', 'probe')
+  purpose_choices = ('enroll', 'probe')
 
   id = Column(Integer, primary_key=True)
   name = Column(Enum(*protocol_choices)) # one of the protocol names
-  purpose = Column(Enum(*purpose_choices)) # one o the choices, enrol or probe
+  purpose = Column(Enum(*purpose_choices)) # one o the choices, enroll or probe
 
   # A direct link to the File objects associated with this Protocol
   files = relationship("File", secondary=protocol_file_association, backref=backref("protocols", order_by=id))

@@ -90,7 +90,7 @@ class Database(bob.db.verification.utils.SQLiteDatabase):
       retval.extend([client for client in query])
 
     if 'dev' in groups:
-      query = self.query(Client).join(File).join((Protocol, File.protocols)).filter(Protocol.purpose == 'enrol')
+      query = self.query(Client).join(File).join((Protocol, File.protocols)).filter(Protocol.purpose == 'enroll')
       if protocol:
         query = query.filter(Protocol.name.in_(protocol))
       retval.extend([client for client in query])
@@ -161,7 +161,7 @@ class Database(bob.db.verification.utils.SQLiteDatabase):
       retval.extend([file for file in query])
 
     if 'dev' in groups:
-      query = self.query(File).join((Protocol, File.protocols)).filter(Protocol.purpose == 'enrol')
+      query = self.query(File).join((Protocol, File.protocols)).filter(Protocol.purpose == 'enroll')
       if protocol:
         query = query.filter(Protocol.name.in_(protocol))
       retval.extend([file for file in query])
@@ -213,7 +213,7 @@ class Database(bob.db.verification.utils.SQLiteDatabase):
       retval.extend([client.id for client in query])
 
     if 'dev' in groups:
-      query = self.query(File).join((Protocol, File.protocols)).filter(Protocol.purpose == 'enrol')
+      query = self.query(File).join((Protocol, File.protocols)).filter(Protocol.purpose == 'enroll')
       if protocol:
         query = query.filter(Protocol.name.in_(protocol))
       retval.extend([file.id for file in query])
@@ -287,7 +287,7 @@ class Database(bob.db.verification.utils.SQLiteDatabase):
       One or several of the GBU protocols ('Good', 'Bad', 'Ugly'), only valid if group is 'dev'.
 
     purposes
-      One or several groups for which objects should be retrieved ('enrol', 'probe'),
+      One or several groups for which objects should be retrieved ('enroll', 'probe'),
       only valid when the group is 'dev'·
 
     model_ids
@@ -336,11 +336,11 @@ class Database(bob.db.verification.utils.SQLiteDatabase):
       retval.extend([file for file in query])
 
     if 'dev' in groups:
-      if 'enrol' in purposes:
-        query = self.query(File).join((Protocol, File.protocols)).filter(Protocol.purpose == 'enrol')
+      if 'enroll' in purposes:
+        query = self.query(File).join((Protocol, File.protocols)).filter(Protocol.purpose == 'enroll')
         if protocol:
           query = query.filter(Protocol.name.in_(protocol))
-        # filter model ids only when only the enrol objects are requested
+        # filter model ids only when only the enroll objects are requested
         if model_ids:
           query = filter_model(query, protocol_type, model_ids)
         retval.extend([file for file in query])

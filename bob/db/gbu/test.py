@@ -97,7 +97,7 @@ def test_objects():
 
   for protocol in protocols:
     # The number of files for each purpose is equal to the number of models
-    assert len(db.objects(groups='dev', protocol=protocol, purposes='enrol')) == len(db.models(protocol_type='gbu', groups='dev', protocol=protocol))
+    assert len(db.objects(groups='dev', protocol=protocol, purposes='enroll')) == len(db.models(protocol_type='gbu', groups='dev', protocol=protocol))
     assert len(db.objects(groups='dev', protocol=protocol, purposes='probe')) == len(db.models(protocol_type='gbu', groups='dev', protocol=protocol))
 
   # The following tests might take a while...
@@ -105,15 +105,15 @@ def test_objects():
   probe_file_count = len(db.objects(protocol_type='gbu', groups='dev', protocol=protocol, purposes='probe'))
   # check that for 'gbu' protocol types, exactly one file per model is returned
   for model_id in random.sample(db.model_ids(protocol_type='gbu', groups='dev', protocol=protocol), 10):
-    # assert that there is exactly one file for each enrol purposes per model
-    assert len(db.objects(protocol_type='gbu', groups='dev', protocol=protocol, model_ids=[model_id], purposes='enrol')) == 1
+    # assert that there is exactly one file for each enroll purposes per model
+    assert len(db.objects(protocol_type='gbu', groups='dev', protocol=protocol, model_ids=[model_id], purposes='enroll')) == 1
     # probe files should always be the same
     assert len(db.objects(protocol_type='gbu', groups='dev', protocol=protocol, model_ids=[model_id], purposes='probe')) == probe_file_count
 
   # for the 'multi' protocols, there is AT LEAST one file per model (client)
   for model_id in random.sample(db.model_ids(protocol_type='multi', groups='dev', protocol=protocol), 10):
-    # assert that there is exactly one file for each enrol purposes per model
-    assert len(db.objects(protocol_type='multi', groups='dev', protocol=protocol, model_ids=[model_id], purposes='enrol')) >= 1
+    # assert that there is exactly one file for each enroll purposes per model
+    assert len(db.objects(protocol_type='multi', groups='dev', protocol=protocol, model_ids=[model_id], purposes='enroll')) >= 1
     # probe files should always be the same
     assert len(db.objects(protocol_type='multi', groups='dev', protocol=protocol, model_ids=[model_id], purposes='probe')) == probe_file_count
 
@@ -128,14 +128,14 @@ def test_file_ids():
 
   # for 'gbu' protocols, get_client_id_from_file_id and get_client_id_from_model_id should return the same value
   for model_id in random.sample(db.model_ids(protocol_type='gbu', groups='dev', protocol=protocol), 10):
-    for file in db.objects(protocol_type='gbu', groups='dev', protocol=protocol, model_ids=[model_id], purposes='enrol'):
+    for file in db.objects(protocol_type='gbu', groups='dev', protocol=protocol, model_ids=[model_id], purposes='enroll'):
       assert db.get_client_id_from_file_id(file.id) == db.get_client_id_from_model_id(model_id, protocol_type='gbu')
 
   for model_id in random.sample(db.model_ids(protocol_type='multi', groups='dev', protocol=protocol), 10):
     # for 'multi' protocols, get_client_id_from_model_id should return the client id.
     assert db.get_client_id_from_model_id(model_id, protocol_type='multi') == model_id
     # and also get_client_id_from_file_id should return the model id
-    for file in db.objects(protocol_type='multi', groups='dev', protocol=protocol, model_ids=[model_id], purposes='enrol'):
+    for file in db.objects(protocol_type='multi', groups='dev', protocol=protocol, model_ids=[model_id], purposes='enroll'):
       assert db.get_client_id_from_file_id(file.id) == model_id
 
 
@@ -159,7 +159,7 @@ def test_driver_api():
   # Tests the functions of the driver API
   from bob.db.base.script.dbmanage import main
   assert main('gbu dumplist --self-test'.split()) == 0
-  assert main('gbu dumplist --group=dev --subworld=x8 --protocol=Good --purpose=enrol --self-test'.split()) == 0
+  assert main('gbu dumplist --group=dev --subworld=x8 --protocol=Good --purpose=enroll --self-test'.split()) == 0
   assert main('gbu checkfiles --self-test'.split()) == 0
   assert main('gbu reverse Target/Original/04542d172 --self-test'.split()) == 0
   assert main('gbu path 513 --self-test'.split()) == 0

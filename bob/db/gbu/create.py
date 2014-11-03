@@ -187,7 +187,7 @@ def add_files_and_protocols(session, list_dir, image_dir, verbose):
   # protocols
   if verbose: print("Adding protocols ...")
   for protocol in protocols:
-    target_protocol = Protocol(protocol, 'enrol')
+    target_protocol = Protocol(protocol, 'enroll')
     session.add(target_protocol)
     session.flush()
     session.refresh(target_protocol)
