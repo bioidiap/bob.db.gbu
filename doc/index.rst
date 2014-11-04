@@ -2,6 +2,8 @@
 .. @author: Manuel Guenther <Manuel.Guenther@idiap.ch>
 .. @date:   Tue Aug 26 09:42:18 CEST 2014
 
+.. _bob.db.gbu:
+
 =================================================================
  The Good, The Bad, and The Ugly Database Verification Protocols
 =================================================================
