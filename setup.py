@@ -5,12 +5,15 @@
 
 from setuptools import setup, find_packages
 
+# Define package version
+version = open("version.txt").read().rstrip()
+
 # The only thing we do in this file is to call the setup() function with all
 # parameters that define our package.
 setup(
 
     name='bob.db.gbu',
-    version='2.0.0a0',
+    version=version,
     description='Database Access API of the Good, the Bad and the Ugly (GBU) image database for Bob',
     url='http://github.com/bioidiap/bob.db.gbu',
     license='GPLv3',
