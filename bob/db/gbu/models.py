@@ -26,7 +26,7 @@ from bob.db.base.sqlalchemy_migration import Enum, relationship
 from sqlalchemy.orm import backref
 from sqlalchemy.ext.declarative import declarative_base
 
-import bob.db.verification.utils
+import bob.db.base
 
 Base = declarative_base()
 
@@ -78,7 +78,7 @@ class Annotation(Base):
     return "<Annotation('%s': 'reye'=%dx%d, 'leye'=%dx%d)>" % (self.file_id, self.re_y, self.re_x, self.le_y, self.le_x)
 
 
-class File(Base, bob.db.verification.utils.File):
+class File(Base, bob.db.base.File):
   """The file of the GBU database consists of an integral id
   as well as the 'presentation' as read from the file lists.
   Each file has one annotation and one associated client."""
@@ -94,7 +94,7 @@ class File(Base, bob.db.verification.utils.File):
 
   def __init__(self, presentation, signature, path):
     # call base class function
-    bob.db.verification.utils.File.__init__(self, client_id = client_id_from_signature(signature), path = path)
+    bob.db.base.File.__init__(self, client_id = client_id_from_signature(signature), path = path)
     # signature and presentation are not stored, but needed for creation
     self.signature = signature
     self.presentation = presentation

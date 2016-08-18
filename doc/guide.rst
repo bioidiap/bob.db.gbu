@@ -42,7 +42,7 @@ If this fails again, your copy of the MBGC-V1 database is corrupted, and you mig
 The Database Interface
 ----------------------
 
-The :py:class:`bob.db.gbu.Database` complies with the standard biometric verification database as described in :ref:`commons`, implementing the interface :py:class:`bob.db.verification.utils.SQLiteDatabase`.
+The :py:class:`bob.db.gbu.Database` complies with the standard biometric verification database as described in :ref:`commons`, implementing the interface :py:class:`bob.db.base.SQLiteDatabase`.
 
 
 Particularities of this Database Interface
