@@ -94,7 +94,8 @@ class File(Base, bob.db.base.File):
 
   def __init__(self, presentation, signature, path):
     # call base class function
-    bob.db.base.File.__init__(self, client_id = client_id_from_signature(signature), path = path)
+    bob.db.base.File.__init__(self, path = path)
+    self.client_id = client_id_from_signature(signature)
     # signature and presentation are not stored, but needed for creation
     self.signature = signature
     self.presentation = presentation
