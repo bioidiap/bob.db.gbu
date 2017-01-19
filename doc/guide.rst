@@ -17,11 +17,11 @@ To be able to use this database, please have a look at the NIST webpage: http://
 Unfortunately, the directory structure in this image database changed.
 If you have an older version of it, and the ``./bin/bob_dbmanage.py gbu checkfiles --directory <YOUR_PATH_TO_MBGC-V1>`` fails (i.e. reports missing files), you have two possible options:
 
-* Download the GBU-sigsets.zip file from https://github.com/bioidiap/bob.db.gbu/downloads, extract the zip file to a directory of your choice and call:
+* Call:
 
   .. code-block:: sh
 
-    $ ./bin/bob_dbmanage.py gbu create --recreate --list-directory <YOUR_PATH_TO_THE_XML_LISTS> --rescan-image-directory <YOUR_PATH_TO_MBGC-V1>
+    $ ./bin/bob_dbmanage.py gbu create --recreate --rescan-image-directory <YOUR_PATH_TO_MBGC-V1>
 
   (you might need root access to recreate the database)
 
@@ -33,10 +33,6 @@ If you have an older version of it, and the ``./bin/bob_dbmanage.py gbu checkfil
 
 To be sure that the procedure succeeded, please call ``./bin/bob_dbmanage.py gbu checkfiles --directory <YOUR_PATH_TO_MBGC-V1>`` or ``./bin/bob_dbmanage.py gbu checkfiles --directory <NEW_IMAGE_PATH_TO_BE_CREATED>`` afterwards.
 If this fails again, your copy of the MBGC-V1 database is corrupted, and you might consider to get a new copy of it.
-
-.. note::
-  The lists from https://github.com/bioidiap/bob.db.gbu/downloads contains the file lists as provided by the CSU Face Recognition Resources, see http://www.cs.colostate.edu/facerec/algorithms/baselines2011.php.
-  In these files, the directory structure is adapted to our (the latest?) version of the MBGC-V1 database.
 
 
 The Database Interface
