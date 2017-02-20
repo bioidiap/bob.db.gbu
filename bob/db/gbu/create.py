@@ -235,6 +235,19 @@ def create_tables(args):
   engine = create_engine_try_nolock(args.type, args.files[0], echo=(args.verbose > 2))
   Base.metadata.create_all(engine)
 
+
+def unzip_file(file_name):
+  """Unzip the XMLs"""
+  import tarfile
+
+  t = tarfile.open(fileobj=open(file_name), mode='r:gz')
+  path = os.path.join(os.path.dirname(file_name), 'xmls')
+  t.extractall(path)
+  t.close()
+
+  return path
+
+
 # Driver API
 # ==========
 
@@ -254,7 +267,12 @@ def create(args):
   # the real work...
   create_tables(args)
   s = utils.session(args.type, args.files[0], echo=(args.verbose > 2))
-  add_files_and_protocols(s, args.list_directory, args.rescan_image_directory, args.verbose)
+  if os.path.isfile(args.list_directory):
+    path = unzip_file(args.list_directory)
+  else:
+    path = args.list_directory
+  
+  add_files_and_protocols(s,path , args.rescan_image_directory, args.verbose)
   s.commit()
   s.close()
 
@@ -262,11 +280,13 @@ def create(args):
 def add_command(subparsers):
   """Add specific subcommands that the action "create" can use"""
 
-  parser = subparsers.add_parser('create', help=create.__doc__)
+  import pkg_resources
 
+  parser = subparsers.add_parser('create', help=create.__doc__)
+  xml_paths = pkg_resources.resource_filename(__name__, 'xmls.tar.gz')
   parser.add_argument('-R', '--recreate', action='store_true', help='If set, I\'ll first erase the current database')
   parser.add_argument('-v', '--verbose', action='count', help='Do SQL operations in a verbose way')
-  parser.add_argument('-D', '--list-directory', metavar='DIR', default = '/idiap/group/biometric/databases/gbu', help='Change the relative path to the directory containing the list of the GBU database.')
+  parser.add_argument('-D', '--list-directory', metavar='DIR', default = xml_paths, help='Change the relative path to the directory containing the list of the GBU database. Defaults to "%(default)s"')
   # here at Idiap, we can use the  directory '/idiap/resource/database/MBGC-V1' to re-scan, if required.
   parser.add_argument('--rescan-image-directory', metavar='DIR', help='If required, select the path to the directory containing the images of the MBGC-V1 database to be re-scanned')
 
