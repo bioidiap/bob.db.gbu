@@ -31,6 +31,7 @@ import six
 
 import bob.db.base
 
+
 class Database(bob.db.base.SQLiteDatabase):
   """The dataset class opens and maintains a connection opened to the Database.
 
@@ -38,18 +39,20 @@ class Database(bob.db.base.SQLiteDatabase):
   and for the data itself inside the database.
   """
 
-  def __init__(self, original_directory = None, original_extension = '.jpg'):
+  def __init__(self, original_directory=None, original_extension='.jpg'):
     # call base class constructor
-    super(Database, self).__init__(SQLITE_FILE, File)
-    self.original_directory = original_directory
-    self.original_extension = original_extension
+    super(Database, self).__init__(SQLITE_FILE, File,
+                                   original_directory, original_extension)
 
     # define some values that we will support
-    self.m_groups  = ('world', 'dev') # GBU does not provide an eval set
-    self.m_sub_worlds = Subworld.subworld_choices # Will be queried by the 'subworld' parameters
+    self.m_groups = ('world', 'dev')  # GBU does not provide an eval set
+    # Will be queried by the 'subworld' parameters
+    self.m_sub_worlds = Subworld.subworld_choices
     self.m_purposes = Protocol.purpose_choices
     self.m_protocols = Protocol.protocol_choices
-    self.m_protocol_types = ('gbu', 'multi') # The type of protocols: The default GBU or one with multiple files per model
+    # The type of protocols: The default GBU or one with multiple files per
+    # model
+    self.m_protocol_types = ('gbu', 'multi')
 
   def groups(self, protocol=None):
     """Returns a list of groups for the given protocol
@@ -80,8 +83,10 @@ class Database(bob.db.base.SQLiteDatabase):
     Returns: A list containing all the Client objects which have the desired properties.
     """
     groups = self.check_parameters_for_validity(groups, "group", self.m_groups)
-    subworld = self.check_parameters_for_validity(subworld, "sub-world", self.m_sub_worlds)
-    protocol = self.check_parameters_for_validity(protocol, "protocol", self.m_protocols)
+    subworld = self.check_parameters_for_validity(
+        subworld, "sub-world", self.m_sub_worlds)
+    protocol = self.check_parameters_for_validity(
+        protocol, "protocol", self.m_protocols)
 
     retval = []
     # List of the clients
@@ -92,13 +97,13 @@ class Database(bob.db.base.SQLiteDatabase):
       retval.extend([client for client in query])
 
     if 'dev' in groups:
-      query = self.query(Client).join(File).join((Protocol, File.protocols)).filter(Protocol.purpose == 'enroll')
+      query = self.query(Client).join(File).join(
+          (Protocol, File.protocols)).filter(Protocol.purpose == 'enroll')
       if protocol:
         query = query.filter(Protocol.name.in_(protocol))
       retval.extend([client for client in query])
 
     return retval
-
 
   def client_ids(self, groups=None, subworld=None, protocol=None):
     """Returns a list of client ids for the specific query by the user.
@@ -119,7 +124,6 @@ class Database(bob.db.base.SQLiteDatabase):
     self.assert_validity()
 
     return [client.id for client in self.clients(groups, subworld, protocol)]
-
 
   def models(self, groups=None, subworld=None, protocol=None, protocol_type='gbu'):
     """Returns a list of models for the specific query by the user.
@@ -144,15 +148,18 @@ class Database(bob.db.base.SQLiteDatabase):
 
     Returns: A list containing all the models belonging to the given group.
     """
-    protocol_type = self.check_parameter_for_validity(protocol_type, "types", self.m_protocol_types)
+    protocol_type = self.check_parameter_for_validity(
+        protocol_type, "types", self.m_protocol_types)
 
     if protocol_type == 'multi':
       # clients and models are the same
       return self.clients(groups, subworld, protocol)
 
     groups = self.check_parameters_for_validity(groups, "group", self.m_groups)
-    subworld = self.check_parameters_for_validity(subworld, "sub-world", self.m_sub_worlds)
-    protocol = self.check_parameters_for_validity(protocol, "protocol", self.m_protocols)
+    subworld = self.check_parameters_for_validity(
+        subworld, "sub-world", self.m_sub_worlds)
+    protocol = self.check_parameters_for_validity(
+        protocol, "protocol", self.m_protocols)
 
     retval = []
     # query the files and extract their ids
@@ -163,13 +170,13 @@ class Database(bob.db.base.SQLiteDatabase):
       retval.extend([file for file in query])
 
     if 'dev' in groups:
-      query = self.query(File).join((Protocol, File.protocols)).filter(Protocol.purpose == 'enroll')
+      query = self.query(File).join((Protocol, File.protocols)
+                                    ).filter(Protocol.purpose == 'enroll')
       if protocol:
         query = query.filter(Protocol.name.in_(protocol))
       retval.extend([file for file in query])
 
     return retval
-
 
   def model_ids(self, groups=None, subworld=None, protocol=None, protocol_type='gbu'):
     """Returns a list of model ids for the specific query by the user.
@@ -196,15 +203,18 @@ class Database(bob.db.base.SQLiteDatabase):
 
     Returns: A list containing all the model id's belonging to the given group.
     """
-    protocol_type = self.check_parameter_for_validity(protocol_type, "types", self.m_protocol_types)
+    protocol_type = self.check_parameter_for_validity(
+        protocol_type, "types", self.m_protocol_types)
 
     if protocol_type == 'multi':
       # clients and models are the same
       return self.client_ids(groups, subworld, protocol)
 
     groups = self.check_parameters_for_validity(groups, "group", self.m_groups)
-    subworld = self.check_parameters_for_validity(subworld, "sub-world", self.m_sub_worlds)
-    protocol = self.check_parameters_for_validity(protocol, "protocol", self.m_protocols)
+    subworld = self.check_parameters_for_validity(
+        subworld, "sub-world", self.m_sub_worlds)
+    protocol = self.check_parameters_for_validity(
+        protocol, "protocol", self.m_protocols)
 
     retval = []
     # for world group, we always have CLIENT IDS
@@ -215,13 +225,13 @@ class Database(bob.db.base.SQLiteDatabase):
       retval.extend([client.id for client in query])
 
     if 'dev' in groups:
-      query = self.query(File).join((Protocol, File.protocols)).filter(Protocol.purpose == 'enroll')
+      query = self.query(File).join((Protocol, File.protocols)
+                                    ).filter(Protocol.purpose == 'enroll')
       if protocol:
         query = query.filter(Protocol.name.in_(protocol))
       retval.extend([file.id for file in query])
 
     return retval
-
 
   def get_client_id_from_file_id(self, file_id, **kwargs):
     """Returns the client id (real client id) attached to the given file id
@@ -239,7 +249,6 @@ class Database(bob.db.base.SQLiteDatabase):
 
     assert query.count() == 1
     return query.first().client_id
-
 
   def get_client_id_from_model_id(self, model_id, group='dev', protocol_type='gbu', **kwargs):
     """Returns the client id attached to the given model id.
@@ -263,7 +272,8 @@ class Database(bob.db.base.SQLiteDatabase):
     Returns: The client_id attached to the given model_id
     """
 
-    protocol_type = self.check_parameter_for_validity(protocol_type, "protocol type", self.m_protocol_types)
+    protocol_type = self.check_parameter_for_validity(
+        protocol_type, "protocol type", self.m_protocol_types)
     group = self.check_parameter_for_validity(group, "group", self.m_groups)
 
     if protocol_type == 'multi' or group == 'world':
@@ -271,8 +281,6 @@ class Database(bob.db.base.SQLiteDatabase):
       return model_id
     else:
       return self.get_client_id_from_file_id(model_id)
-
-
 
   def objects(self, groups=None, subworld=None, protocol=None, purposes=None, model_ids=None, protocol_type='gbu'):
     """Using the specified restrictions, this function returns a list of File objects.
@@ -317,15 +325,21 @@ class Database(bob.db.base.SQLiteDatabase):
 
     # check that every parameter is as expected
     groups = self.check_parameters_for_validity(groups, "group", self.m_groups)
-    subworld = self.check_parameters_for_validity(subworld, "sub-world", self.m_sub_worlds)
-    protocol = self.check_parameters_for_validity(protocol, "protocol", self.m_protocols)
-    purposes = self.check_parameters_for_validity(purposes, "purpose", self.m_purposes)
-    protocol_type = self.check_parameter_for_validity(protocol_type, 'protocol type', self.m_protocol_types)
+    subworld = self.check_parameters_for_validity(
+        subworld, "sub-world", self.m_sub_worlds)
+    protocol = self.check_parameters_for_validity(
+        protocol, "protocol", self.m_protocols)
+    purposes = self.check_parameters_for_validity(
+        purposes, "purpose", self.m_purposes)
+    protocol_type = self.check_parameter_for_validity(
+        protocol_type, 'protocol type', self.m_protocol_types)
 
     if isinstance(model_ids, six.string_types):
       model_ids = (model_ids,)
-    # check that the model ids are in the actual set of model ids (for the type of protocol that we are currently using)
-    model_ids = self.check_parameters_for_validity(model_ids, 'model id', self.model_ids(groups=groups, subworld=subworld, protocol=protocol, protocol_type=protocol_type),[])
+    # check that the model ids are in the actual set of model ids (for the
+    # type of protocol that we are currently using)
+    model_ids = self.check_parameters_for_validity(model_ids, 'model id', self.model_ids(
+        groups=groups, subworld=subworld, protocol=protocol, protocol_type=protocol_type), [])
 
     retval = []
 
@@ -333,13 +347,15 @@ class Database(bob.db.base.SQLiteDatabase):
       query = self.query(File).join((Subworld, File.subworlds))
       if subworld:
         query = query.filter(Subworld.name.in_(subworld))
-      # here, we always filter by client ids (which is done by taking the 'multi' protocol)
+      # here, we always filter by client ids (which is done by taking the
+      # 'multi' protocol)
       query = filter_model(query, 'multi', model_ids)
       retval.extend([file for file in query])
 
     if 'dev' in groups:
       if 'enroll' in purposes:
-        query = self.query(File).join((Protocol, File.protocols)).filter(Protocol.purpose == 'enroll')
+        query = self.query(File).join((Protocol, File.protocols)).filter(
+            Protocol.purpose == 'enroll')
         if protocol:
           query = query.filter(Protocol.name.in_(protocol))
         # filter model ids only when only the enroll objects are requested
@@ -348,18 +364,18 @@ class Database(bob.db.base.SQLiteDatabase):
         retval.extend([file for file in query])
 
       if 'probe' in purposes:
-        query = self.query(File).join((Protocol, File.protocols)).filter(Protocol.purpose == 'probe')
+        query = self.query(File).join(
+            (Protocol, File.protocols)).filter(Protocol.purpose == 'probe')
         if protocol:
           query = query.filter(Protocol.name.in_(protocol))
         retval.extend([file for file in query])
 
     return retval
 
-
   def annotations(self, file):
     """Returns the annotations for the given ``File`` object as a dictionary {'reye':(y,x), 'leye':(y,x)}."""
     self.assert_validity()
 
-    # return the annotations as returned by the call function of the Annotation object
+    # return the annotations as returned by the call function of the
+    # Annotation object
     return file.annotation()
-
